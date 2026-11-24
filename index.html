@@ -1,0 +1,3290 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>WINTER RUNNER 8D — Subway Winter Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      background: #070b1e;
+      font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+      color: #f8fafc;
+    }
+
+    #game-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    #toast-container {
+      position: fixed;
+      top: 78px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      width: 90%;
+      max-width: 360px;
+    }
+
+    .toast {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(167, 139, 250, 0.65);
+      color: #f8fafc;
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      animation: slideDown 0.25s ease-out;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* O'yin vaqtidagi yuqori HUD */
+    .game-hud {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .hud-pill {
+      background: rgba(15, 20, 48, 0.88);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      backdrop-filter: blur(10px);
+      padding: 8px 13px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    .hud-pill span.val {
+      color: #38bdf8;
+      font-weight: 900;
+      font-size: 16px;
+    }
+
+    .hud-pill.coin span.val { color: #facc15; }
+    .hud-pill.board span.val { color: #c084fc; }
+
+    /* Aktiv Bonuslar Taymer Paneli */
+    #powerups-hud {
+      position: fixed;
+      top: 64px;
+      left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .pu-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 20, 48, 0.92);
+      border: 1px solid rgba(167, 139, 250, 0.5);
+      padding: 5px 10px;
+      border-radius: 14px;
+      width: 165px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    }
+
+    .pu-track {
+      flex: 1;
+      height: 7px;
+      background: rgba(30, 41, 59, 0.95);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .pu-fill {
+      height: 100%;
+      width: 100%;
+      border-radius: 999px;
+      transition: width 0.08s linear;
+    }
+
+    .double-tap-tip {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 20, 48, 0.78);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #cbd5e1;
+      z-index: 20;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    /* Bosh menyu (Main Lobby UI) */
+    #lobby-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+      background: radial-gradient(circle at 50% 35%, rgba(15, 23, 42, 0.06) 0%, rgba(7, 11, 30, 0.62) 100%);
+      pointer-events: none;
+    }
+
+    .lobby-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      pointer-events: auto;
+      position: relative;
+      z-index: 35;
+    }
+
+    .profile-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(17, 23, 54, 0.92);
+      border: 1px solid rgba(139, 92, 246, 0.5);
+      backdrop-filter: blur(12px);
+      padding: 8px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transition: transform 0.15s ease;
+    }
+
+    .profile-chip:active { transform: scale(0.96); }
+
+    .avatar-frame {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      background: #1e1b4b;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .frame-none { border: 2px solid #6366f1; }
+    .frame-bronze {
+      border: 3px solid #d97706;
+      box-shadow: 0 0 14px rgba(217, 119, 6, 0.65);
+      background: linear-gradient(135deg, #451a03, #1e1b4b);
+    }
+    .frame-iron {
+      border: 3px solid #94a3b8;
+      box-shadow: 0 0 14px rgba(148, 163, 184, 0.75);
+      background: linear-gradient(135deg, #334155, #0f172a);
+    }
+    .frame-gold {
+      border: 3px solid #facc15;
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.85);
+      background: linear-gradient(135deg, #713f12, #1e1b4b);
+    }
+    .frame-diamond {
+      border: 3px solid #38bdf8;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.9);
+      background: linear-gradient(135deg, #0c4a6e, #312e81);
+    }
+
+    .profile-meta { display: flex; flex-direction: column; }
+    .profile-meta .p-name {
+      font-weight: 800;
+      font-size: 14px;
+      color: #f8fafc;
+      max-width: 115px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .profile-meta .p-id {
+      font-size: 11px;
+      color: #a5b4fc;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .top-right-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .currency-row { display: flex; gap: 6px; }
+    .mini-stat {
+      background: rgba(17, 23, 54, 0.92);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      backdrop-filter: blur(10px);
+      padding: 6px 11px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .rank-top-btn {
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+      border: 1px solid rgba(196, 181, 253, 0.55);
+      color: #ffffff;
+      padding: 9px 14px;
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 8px 20px rgba(124, 58, 237, 0.5);
+      pointer-events: auto;
+    }
+
+    .lobby-center {
+      text-align: center;
+      pointer-events: auto;
+      margin: auto 0;
+      position: relative;
+      z-index: 40;
+    }
+
+    .winter-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.22);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: #7dd3fc;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .game-logo {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.05;
+      background: linear-gradient(180deg, #ffffff 15%, #93c5fd 55%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 6px 18px rgba(79, 70, 229, 0.6));
+      margin-bottom: 6px;
+    }
+
+    .best-dist-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 20, 48, 0.88);
+      border: 1px solid rgba(167, 139, 250, 0.4);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 18px;
+    }
+
+    .play-main-btn {
+      position: relative;
+      z-index: 45;
+      pointer-events: auto;
+      width: 100%;
+      max-width: 260px;
+      padding: 17px 24px;
+      border: none;
+      border-radius: 22px;
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      color: #ffffff;
+      background: linear-gradient(135deg, #3b82f6 0%, #7c3aed 50%, #9333ea 100%);
+      box-shadow: 0 12px 32px rgba(124, 58, 237, 0.65), inset 0 2px 2px rgba(255, 255, 255, 0.35);
+      cursor: pointer;
+    }
+
+    .play-main-btn:active { transform: scale(0.95); }
+
+    .bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      pointer-events: auto;
+      position: relative;
+      z-index: 35;
+    }
+
+    .nav-btn {
+      position: relative;
+      background: rgba(17, 23, 54, 0.94);
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      backdrop-filter: blur(12px);
+      border-radius: 20px;
+      padding: 11px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #f8fafc;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+      pointer-events: auto;
+    }
+
+    .nav-btn:active { transform: scale(0.94); border-color: #c084fc; }
+    .nav-btn .ico { font-size: 21px; }
+    .nav-btn .txt { font-size: 12px; font-weight: 800; }
+
+    .notif-dot {
+      position: absolute;
+      top: -5px;
+      right: -3px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #0f172a;
+    }
+
+    /* Modallar */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 11, 30, 0.86);
+      backdrop-filter: blur(12px);
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      position: relative;
+      z-index: 85;
+      pointer-events: auto;
+      width: 100%;
+      max-width: 460px;
+      max-height: 88vh;
+      background: linear-gradient(160deg, #13193b 0%, #1d1847 100%);
+      border: 1px solid rgba(167, 139, 250, 0.45);
+      border-radius: 24px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.78);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #93c5fd, #d8b4fe);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .close-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.75);
+      color: #cbd5e1;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      overflow-y: auto;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-body::-webkit-scrollbar { width: 5px; }
+    .modal-body::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.45);
+      border-radius: 999px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      background: rgba(9, 13, 34, 0.65);
+      padding: 5px;
+      border-radius: 16px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 9px;
+      border: none;
+      border-radius: 12px;
+      background: transparent;
+      color: #94a3b8;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+      color: #ffffff;
+    }
+
+    /* Shop va Skins uchun rasmli kartochka */
+    .item-card {
+      background: rgba(11, 16, 40, 0.88);
+      border: 1px solid rgba(139, 92, 246, 0.32);
+      border-radius: 18px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .skin-thumb {
+      width: 72px;
+      height: 78px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 50% 40%, #251f5e 0%, #090d22 100%);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .item-info { flex: 1; min-width: 0; }
+    .item-info h4 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-bottom: 3px;
+    }
+    .item-info p {
+      font-size: 11.5px;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
+    .rarity-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .rarity-mythic { background: rgba(239, 68, 68, 0.22); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .rarity-legendary { background: rgba(168, 85, 247, 0.22); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); }
+    .rarity-epic { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.4); }
+
+    .action-btn {
+      padding: 9px 13px;
+      border: none;
+      border-radius: 14px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      color: #ffffff;
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .action-btn.equipped {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid #22c55e;
+      color: #86efac;
+    }
+
+    .action-btn.claimed {
+      background: rgba(148, 163, 184, 0.18);
+      color: #94a3b8;
+      cursor: default;
+    }
+
+    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .input-box {
+      width: 100%;
+      padding: 13px 15px;
+      border-radius: 16px;
+      border: 1px solid rgba(139, 92, 246, 0.45);
+      background: rgba(9, 13, 34, 0.88);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .search-row { display: flex; gap: 8px; }
+
+    .player-row {
+      background: rgba(11, 16, 40, 0.85);
+      border: 1px solid rgba(139, 92, 246, 0.28);
+      border-radius: 16px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .player-row:hover { border-color: #a855f7; }
+
+    .rank-num {
+      width: 28px;
+      font-weight: 900;
+      font-size: 14px;
+      text-align: center;
+      color: #94a3b8;
+    }
+    .rank-1 { color: #facc15; font-size: 17px; }
+    .rank-2 { color: #e2e8f0; font-size: 16px; }
+    .rank-3 { color: #f59e0b; font-size: 16px; }
+
+    #friend-3d-preview {
+      width: 100%;
+      height: 220px;
+      border-radius: 20px;
+      background: radial-gradient(circle at 50% 45%, #1e1b4b 0%, #090d22 100%);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .prog-track {
+      width: 100%;
+      height: 6px;
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 999px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #a855f7);
+      border-radius: 999px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- 3D O'yin Sahna Konteyneri -->
+  <div id="game-container"></div>
+
+  <!-- Toast Xabarlar -->
+  <div id="toast-container"></div>
+
+  <!-- O'yin vaqtidagi HUD -->
+  <div class="game-hud hidden" id="game-hud">
+    <div class="hud-pill">
+      <span>Masofa:</span>
+      <span class="val" id="hud-dist">0 m</span>
+      <span id="hud-2x-badge" class="hidden" style="background:#facc15; color:#090d22; font-size:11px; font-weight:900; padding:2px 6px; border-radius:8px;">2X</span>
+    </div>
+    <div class="hud-pill board">
+      <span>🛹</span>
+      <span class="val" id="hud-boards">20</span>
+    </div>
+    <div class="hud-pill coin">
+      <span>🪙</span>
+      <span class="val" id="hud-coins">0</span>
+    </div>
+  </div>
+
+  <!-- Faol Bonuslar Taymerlari -->
+  <div id="powerups-hud" class="hidden">
+    <div class="pu-bar-item hidden" id="pu-board-box">
+      <span>🛹</span>
+      <div class="pu-track"><div class="pu-fill" id="pu-board-fill" style="background:linear-gradient(90deg,#38bdf8,#c084fc);"></div></div>
+    </div>
+    <div class="pu-bar-item hidden" id="pu-sneakers-box">
+      <span>👟</span>
+      <div class="pu-track"><div class="pu-fill" id="pu-sneakers-fill" style="background:linear-gradient(90deg,#22c55e,#a3e635);"></div></div>
+    </div>
+    <div class="pu-bar-item hidden" id="pu-jetpack-box">
+      <span>🚀</span>
+      <div class="pu-track"><div class="pu-fill" id="pu-jetpack-fill" style="background:linear-gradient(90deg,#f97316,#ef4444);"></div></div>
+    </div>
+    <div class="pu-bar-item hidden" id="pu-star-box">
+      <span>⭐</span>
+      <div class="pu-track"><div class="pu-fill" id="pu-star-fill" style="background:linear-gradient(90deg,#facc15,#fde047);"></div></div>
+    </div>
+  </div>
+
+  <div class="double-tap-tip hidden" id="double-tap-tip">
+    ⚡ Ekranga 2 marta bosing — Skuter faollashadi!
+  </div>
+
+  <!-- BOSH MENYU (LOBBY) -->
+  <div id="lobby-screen">
+    <div class="lobby-top">
+      <div class="profile-chip" id="open-my-profile">
+        <div class="avatar-frame frame-none" id="lobby-avatar-frame">
+          <span id="lobby-avatar-icon">🏂</span>
+        </div>
+        <div class="profile-meta">
+          <span class="p-name" id="lobby-player-name">O'yinchi</span>
+          <span class="p-id">ID: <strong id="lobby-player-id">00000000</strong> 📋</span>
+        </div>
+      </div>
+
+      <div class="top-right-stack">
+        <div class="currency-row">
+          <div class="mini-stat">🪙 <span id="lobby-coins" style="color:#facc15;">0</span></div>
+          <div class="mini-stat">🛹 <span id="lobby-boards" style="color:#c084fc;">20</span></div>
+        </div>
+        <button class="rank-top-btn" id="btn-open-ranking">
+          🏆 Reyting (Top-20)
+        </button>
+      </div>
+    </div>
+
+    <div class="lobby-center">
+      <div class="winter-badge">❄️ Winter Holiday Edition</div>
+      <h1 class="game-logo">WINTER RUNNER 8D</h1>
+      <div class="best-dist-pill">
+        🏁 Eng uzoq masofa: <strong id="lobby-best-dist" style="color:#38bdf8;">0 m</strong>
+      </div>
+      <br />
+      <button class="play-main-btn" id="btn-start-game">▶ O'YNASH</button>
+    </div>
+
+    <div class="bottom-nav">
+      <button class="nav-btn" id="nav-shop">
+        <span class="ico">🛒</span>
+        <span class="txt">Shop</span>
+      </button>
+      <button class="nav-btn" id="nav-missions">
+        <span class="ico">🎯</span>
+        <span class="txt">Missions</span>
+        <span class="notif-dot hidden" id="mission-badge">!</span>
+      </button>
+      <button class="nav-btn" id="nav-skins">
+        <span class="ico">👕</span>
+        <span class="txt">Skins</span>
+      </button>
+      <button class="nav-btn" id="nav-friends">
+        <span class="ico">👥</span>
+        <span class="txt">Do'stlar</span>
+        <span class="notif-dot hidden" id="friend-req-badge">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 1. ISM KIRITISH MODALI -->
+  <div class="modal-backdrop hidden" id="register-modal">
+    <div class="modal-card" style="text-align:center;">
+      <div class="winter-badge" style="margin:0 auto 10px;">❄️ Xush Kelibsiz!</div>
+      <h2 style="font-size:22px; font-weight:900; margin-bottom:8px;">Akkaunt Yaratish</h2>
+      <p style="font-size:13px; color:#cbd5e1; margin-bottom:16px; line-height:1.45;">
+        Top-20 reytingga kirish va do'stlar qo'shish uchun ismingizni kiriting. Sizga 8 xonali shaxsiy ID, 500 tanga va 20 ta bepul skuter beriladi!
+      </p>
+      <input type="text" id="reg-name-input" class="input-box" placeholder="Ismingizni kiriting..." maxlength="16" style="margin-bottom:14px; text-align:center;" />
+      <button class="play-main-btn" id="reg-submit-btn" style="max-width:100%;">DAVOM ETISH</button>
+    </div>
+  </div>
+
+  <!-- 2. SHOP MODALI -->
+  <div class="modal-backdrop hidden" id="shop-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🛒 Do'kon (Shop)</h2>
+        <button class="close-btn" data-close="shop-modal">✕</button>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-shop-tab="chars">🦅 Odam Skinlari</button>
+        <button class="tab-btn" data-shop-tab="boards">🛹 Skuterlar</button>
+      </div>
+      <div class="modal-body" id="shop-list"></div>
+    </div>
+  </div>
+
+  <!-- 3. MISSIONS MODALI -->
+  <div class="modal-backdrop hidden" id="missions-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🎯 Missions & Ramkalar</h2>
+        <button class="close-btn" data-close="missions-modal">✕</button>
+      </div>
+      <div class="modal-body" id="missions-list"></div>
+    </div>
+  </div>
+
+  <!-- 4. SKINS (FAQAT SOTIB OLINGAN SKINLAR) -->
+  <div class="modal-backdrop hidden" id="skins-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>👕 Mening Skinlarim</h2>
+        <button class="close-btn" data-close="skins-modal">✕</button>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-skin-tab="chars">🧍 Odam Skinlari</button>
+        <button class="tab-btn" data-skin-tab="boards">🛹 Skuter Skinlari</button>
+      </div>
+      <div class="modal-body" id="owned-skins-list"></div>
+    </div>
+  </div>
+
+  <!-- 5. DO'STLAR (DRUZYA) MODALI -->
+  <div class="modal-backdrop hidden" id="friends-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>👥 Do'stlar (Druzya)</h2>
+        <button class="close-btn" data-close="friends-modal">✕</button>
+      </div>
+      <div style="background:rgba(9,13,34,0.7); padding:10px 12px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12px; color:#cbd5e1;">Sizning 8 xonali ID: <strong id="modal-my-id" style="color:#38bdf8;">00000000</strong></span>
+        <button class="action-btn" id="copy-id-btn" style="padding:6px 10px;">Nusxalash</button>
+      </div>
+      <div class="search-row" style="margin-bottom:12px;">
+        <input type="text" id="friend-id-input" class="input-box" placeholder="Do'stning 8 xonali ID raqami..." maxlength="8" inputmode="numeric" />
+        <button class="action-btn" id="send-friend-req-btn">Druzya tashlash</button>
+      </div>
+      <div class="modal-body" id="friends-content"></div>
+    </div>
+  </div>
+
+  <!-- 6. TOP-20 REYTING MODALI -->
+  <div class="modal-backdrop hidden" id="ranking-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>🏆 Top-20 Reyting</h2>
+        <button class="close-btn" data-close="ranking-modal">✕</button>
+      </div>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:10px;">
+        Faqat haqiqiy o'yinchilar eng uzoq masofa (m) bo'yicha saralangan. Profilini ko'rish uchun ustiga bosing.
+      </p>
+      <div class="modal-body" id="ranking-list"></div>
+    </div>
+  </div>
+
+  <!-- 7. JONLI 3D PROFIL MODALI -->
+  <div class="modal-backdrop hidden" id="profile-view-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="pv-modal-title">O'yinchi Profili</h2>
+        <button class="close-btn" data-close="profile-view-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="friend-3d-preview"></div>
+        <div style="display:flex; align-items:center; gap:12px; background:rgba(11,16,40,0.85); padding:12px; border-radius:18px; border:1px solid rgba(139,92,246,0.3);">
+          <div class="avatar-frame frame-none" id="pv-avatar-frame" style="width:56px; height:56px; font-size:26px;">
+            <span id="pv-avatar-icon">🏂</span>
+          </div>
+          <div style="flex:1;">
+            <h3 id="pv-name" style="font-size:18px; font-weight:800;">Ism</h3>
+            <p style="font-size:12px; color:#a5b4fc;">ID: <strong id="pv-id">00000000</strong> • Skin: <strong id="pv-skin-name" style="color:#f472b6;">Voron</strong></p>
+            <p style="font-size:13px; color:#38bdf8; font-weight:800; margin-top:2px;">🏁 Rekord masofa: <span id="pv-best-dist">0 m</span></p>
+          </div>
+        </div>
+        <div id="own-profile-customizer" class="hidden" style="display:flex; flex-direction:column; gap:10px;">
+          <h4 style="font-size:13px; color:#cbd5e1;">🖼 Profil Surati (Avatar) tanlash:</h4>
+          <div id="avatar-picker-row" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+          <h4 style="font-size:13px; color:#cbd5e1; margin-top:4px;">🏅 Yutilgan Profil Ramkalari:</h4>
+          <div id="frame-picker-row" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. O'YIN TUGADI (GAME OVER) MODALI -->
+  <div class="modal-backdrop hidden" id="gameover-modal">
+    <div class="modal-card" style="text-align:center;">
+      <div class="winter-badge" style="margin:0 auto 8px;">❄️ Yugurish Yakunlandi</div>
+      <h2 style="font-size:26px; font-weight:900; margin-bottom:14px;">NATIJANGIZ</h2>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(9,13,34,0.8); padding:14px; border-radius:18px; margin-bottom:18px; border:1px solid rgba(139,92,246,0.3);">
+        <div>
+          <small style="color:#94a3b8; font-size:12px;">Bosilgan masofa</small>
+          <div id="go-dist" style="font-size:22px; font-weight:900; color:#38bdf8;">0 m</div>
+        </div>
+        <div>
+          <small style="color:#94a3b8; font-size:12px;">Yig'ilgan tanga</small>
+          <div id="go-coins" style="font-size:22px; font-weight:900; color:#facc15;">+0</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="action-btn" id="go-menu-btn" style="flex:1; padding:15px; font-size:14px; background:rgba(30,41,59,0.9); border:1px solid rgba(148,163,184,0.3);">🏠 Menyu</button>
+        <button class="play-main-btn" id="go-retry-btn" style="flex:2; padding:15px; font-size:15px;">🔄 Qayta O'ynash</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- SKINLAR VA ULARNING RASMLARI ---
+    function getSkinPreviewSVG(skinId) {
+      if (skinId === 'blood_raven') {
+        return `<svg viewBox="0 0 100 110" width="68" height="74">
+          <defs>
+            <radialGradient id="rvGlow" cx="50%" cy="45%" r="50%">
+              <stop offset="0%" stop-color="#dc2626" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#09090b" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle cx="50" cy="52" r="44" fill="url(#rvGlow)"/>
+          <path d="M12 42 Q4 62 18 88 L34 68 Z" fill="#09090b" stroke="#dc2626" stroke-width="1.5"/>
+          <path d="M88 42 Q96 62 82 88 L66 68 Z" fill="#09090b" stroke="#dc2626" stroke-width="1.5"/>
+          <path d="M32 48 L68 48 L74 96 L26 96 Z" fill="#18181b" stroke="#991b1b" stroke-width="1.5"/>
+          <path d="M44 54 L50 72 L56 54" fill="none" stroke="#ef4444" stroke-width="2.5"/>
+          <circle cx="50" cy="30" r="15" fill="#09090b" stroke="#3f3f46" stroke-width="1.5"/>
+          <path d="M45 31 L50 43 L55 31 Z" fill="#27272a" stroke="#ef4444" stroke-width="1"/>
+          <ellipse cx="43" cy="27" rx="3.5" ry="2" fill="#ff1e1e"/>
+          <ellipse cx="57" cy="27" rx="3.5" ry="2" fill="#ff1e1e"/>
+          <path d="M36 18 L44 22 M64 18 L56 22" stroke="#dc2626" stroke-width="2"/>
+        </svg>`;
+      }
+      if (skinId === 'stygian_liege') {
+        return `<svg viewBox="0 0 100 110" width="68" height="74">
+          <circle cx="50" cy="34" r="26" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-dasharray="6 3"/>
+          <path d="M30 48 L70 48 L75 96 L25 96 Z" fill="#09090b" stroke="#9333ea" stroke-width="1.8"/>
+          <circle cx="50" cy="64" r="7" fill="#c084fc"/>
+          <circle cx="50" cy="30" r="14" fill="#18181b" stroke="#a855f7" stroke-width="1.5"/>
+          <rect x="40" y="26" width="20" height="4" rx="2" fill="#e879f9"/>
+        </svg>`;
+      }
+      if (skinId === 'dark_assassin') {
+        return `<svg viewBox="0 0 100 110" width="68" height="74">
+          <path d="M28 48 L72 48 L70 96 L30 96 Z" fill="#0a0a0f" stroke="#06b6d4" stroke-width="1.5"/>
+          <path d="M33 32 Q50 8 67 32 L64 46 L36 46 Z" fill="#111827" stroke="#22d3ee" stroke-width="1.5"/>
+          <rect x="40" y="28" width="8" height="3.5" rx="1.5" fill="#22d3ee"/>
+          <rect x="52" y="28" width="8" height="3.5" rx="1.5" fill="#22d3ee"/>
+        </svg>`;
+      }
+      if (skinId === 'shadow_pharaoh') {
+        return `<svg viewBox="0 0 100 110" width="68" height="74">
+          <path d="M28 24 L50 10 L72 24 L76 48 L24 48 Z" fill="#18181b" stroke="#facc15" stroke-width="2"/>
+          <path d="M30 48 L70 48 L74 96 L26 96 Z" fill="#09090b" stroke="#eab308" stroke-width="1.8"/>
+          <circle cx="50" cy="32" r="12" fill="#1c1917"/>
+          <rect x="41" y="29" width="7" height="3" fill="#fde047"/>
+          <rect x="52" y="29" width="7" height="3" fill="#fde047"/>
+        </svg>`;
+      }
+      if (skinId === 'raven_wing' || skinId === 'stygian_board' || skinId === 'black_gold' || skinId === 'ice_wave') {
+        const glow = skinId === 'raven_wing' ? '#ef4444' : skinId === 'stygian_board' ? '#c084fc' : skinId === 'black_gold' ? '#facc15' : '#38bdf8';
+        return `<svg viewBox="0 0 100 110" width="68" height="74">
+          <rect x="34" y="14" width="32" height="82" rx="16" fill="#09090b" stroke="${glow}" stroke-width="3"/>
+          <line x1="50" y1="22" x2="50" y2="88" stroke="${glow}" stroke-width="2.5"/>
+          <circle cx="50" cy="55" r="8" fill="${glow}" opacity="0.45"/>
+        </svg>`;
+      }
+      return `<svg viewBox="0 0 100 110" width="68" height="74">
+        <path d="M32 48 L68 48 L72 96 L28 96 Z" fill="#1e3a8a" stroke="#38bdf8" stroke-width="1.8"/>
+        <circle cx="50" cy="30" r="14" fill="#e2c6b0"/>
+        <path d="M35 24 Q50 12 65 24 Z" fill="#38bdf8"/>
+      </svg>`;
+    }
+
+    const CHAR_SKINS = [
+      {
+        id: 'cyber_runner',
+        name: 'Kiber Runner',
+        rarity: 'Boshlang\'ich',
+        rarityClass: 'rarity-epic',
+        price: 0,
+        desc: 'Qishki ko\'k sport kurtka va kepkali yuguruvchi.',
+        colors: { body: 0x1e3a8a, armor: 0x2563eb, accent: 0x38bdf8, eyes: 0x0f172a, type: 'hoodie' }
+      },
+      {
+        id: 'blood_raven',
+        name: 'Voron (Blood Raven)',
+        rarity: 'Mythic X-Suit',
+        rarityClass: 'rarity-mythic',
+        price: 1500,
+        desc: 'Haqiqiy Qora Qarg\'a niqobi, o\'tkir tumshuq, qizil ko\'zlar va qora qanotlar!',
+        colors: { body: 0x09090b, armor: 0x18181b, accent: 0xdc2626, eyes: 0xff1e1e, type: 'raven' }
+      },
+      {
+        id: 'stygian_liege',
+        name: 'Stygian Liege',
+        rarity: 'Mythic X-Suit',
+        rarityClass: 'rarity-mythic',
+        price: 2500,
+        desc: 'Qora obsidian zirh, binafsha plazma tomirlari va kosmik toj.',
+        colors: { body: 0x07070c, armor: 0x1e1b4b, accent: 0xa855f7, eyes: 0xe879f9, type: 'stygian' }
+      },
+      {
+        id: 'dark_assassin',
+        name: 'Dark Assassin',
+        rarity: 'Legendary',
+        rarityClass: 'rarity-legendary',
+        price: 2000,
+        desc: 'Qora soya kapushoni, tungi taktik zirh va neon ko\'k visor.',
+        colors: { body: 0x0a0a0f, armor: 0x111827, accent: 0x06b6d4, eyes: 0x22d3ee, type: 'assassin' }
+      },
+      {
+        id: 'shadow_pharaoh',
+        name: 'Shadow Pharaoh',
+        rarity: 'Mythic X-Suit',
+        rarityClass: 'rarity-mythic',
+        price: 3500,
+        desc: 'Qora va oltin qadimiy Fir\'avn toji hamda shohona zirh.',
+        colors: { body: 0x09090b, armor: 0x171717, accent: 0xfacc15, eyes: 0xfde047, type: 'pharaoh' }
+      }
+    ];
+
+    const BOARD_SKINS = [
+      { id: 'ice_wave', name: 'Muz To\'lqini', rarity: 'Bepul', rarityClass: 'rarity-epic', price: 0, desc: 'Qishki muzli ko\'k neon skuter.', color: 0x0284c7, glow: 0x38bdf8 },
+      { id: 'raven_wing', name: 'Voron Qanoti', rarity: 'Mythic', rarityClass: 'rarity-mythic', price: 250, desc: 'Qora va qizil patli Voron skuteri.', color: 0x09090b, glow: 0xef4444 },
+      { id: 'stygian_board', name: 'Stygian Plazma', rarity: 'Legendary', rarityClass: 'rarity-legendary', price: 250, desc: 'Qora obsidian va binafsha energiyali skuter.', color: 0x0f0c29, glow: 0xc084fc },
+      { id: 'black_gold', name: 'Qora Oltin', rarity: 'Mythic', rarityClass: 'rarity-mythic', price: 250, desc: 'Qora karbon va oltin chiziqli elit skuter.', color: 0x111111, glow: 0xfacc15 }
+    ];
+
+    const PROFILE_FRAMES = [
+      { id: 'none', name: 'Oddiy', css: 'frame-none' },
+      { id: 'bronze', name: '🥉 Bronza', css: 'frame-bronze' },
+      { id: 'iron', name: '⚙️ Temir', css: 'frame-iron' },
+      { id: 'gold', name: '🥇 Oltin', css: 'frame-gold' },
+      { id: 'diamond', name: '💎 Olmos', css: 'frame-diamond' }
+    ];
+
+    const AVATAR_ICONS = ['🏂', '🦅', '🐺', '🥷', '👑', '❄️', '⚡', '🔥'];
+
+    const MISSIONS_DEF = [
+      { id: 'm_dist_500', title: 'Qishki Sayohat', desc: 'Jami 500 m masofa yuguring', statKey: 'totalDist', target: 500, rewardCoins: 300, rewardFrame: 'bronze', frameLabel: '🥉 Bronza Ramka' },
+      { id: 'm_coins_50', title: 'Xazina Ovchisi', desc: 'Jami 50 ta oltin tanga yig\'ing', statKey: 'totalCoins', target: 50, rewardCoins: 450, rewardFrame: 'iron', frameLabel: '⚙️ Temir Ramka' },
+      { id: 'm_board_3', title: 'Skuter Ustasi', desc: 'O\'yinda 3 marta skuter (Double-Tap) ishlating', statKey: 'boardsUsed', target: 3, rewardCoins: 600, rewardFrame: 'gold', frameLabel: '🥇 Oltin Ramka' },
+      { id: 'm_single_2000', title: 'Muz Afsonasi', desc: 'Bir urinishda 2000 m masofa bosib o\'ting', statKey: 'bestDist', target: 2000, rewardCoins: 1000, rewardFrame: 'diamond', frameLabel: '💎 Olmos Ramka' }
+    ];
+
+    // --- FOYDALANUVCHI MA'LUMOTLARI VA UI YANGILASH ---
+    let userData = null;
+    let allPlayersMap = {};
+    let db = null;
+    let auth = null;
+    let currentUserUid = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'winter-runner-8d';
+
+    function showToast(msg) {
+      const box = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => el.remove(), 2600);
+    }
+
+    function generate8DigitId() {
+      return String(Math.floor(10000000 + Math.random() * 90000000));
+    }
+
+    function loadLocalUser() {
+      try {
+        const raw = localStorage.getItem('winter_runner_8d_user');
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function updateLobbyUI() {
+      if (!userData) return;
+      document.getElementById('lobby-player-name').textContent = userData.name || "O'yinchi";
+      document.getElementById('lobby-player-id').textContent = userData.playerId || '00000000';
+      document.getElementById('modal-my-id').textContent = userData.playerId || '00000000';
+      document.getElementById('lobby-coins').textContent = userData.coins || 0;
+      document.getElementById('lobby-boards').textContent = userData.boardsCount ?? 20;
+      document.getElementById('lobby-best-dist').textContent = `${userData.bestDist || 0} m`;
+      document.getElementById('lobby-avatar-icon').textContent = userData.avatar || '🏂';
+
+      const frameObj = PROFILE_FRAMES.find(f => f.id === (userData.equippedFrame || 'none')) || PROFILE_FRAMES[0];
+      document.getElementById('lobby-avatar-frame').className = `avatar-frame ${frameObj.css}`;
+
+      const reqCount = (userData.friendRequests || []).length;
+      const reqBadge = document.getElementById('friend-req-badge');
+      if (reqCount > 0) {
+        reqBadge.textContent = reqCount;
+        reqBadge.classList.remove('hidden');
+      } else {
+        reqBadge.classList.add('hidden');
+      }
+
+      const hasClaimable = MISSIONS_DEF.some(m => {
+        const val = userData.stats?.[m.statKey] || 0;
+        const claimed = (userData.claimedMissions || []).includes(m.id);
+        return !claimed && val >= m.target;
+      });
+      const mBadge = document.getElementById('mission-badge');
+      if (hasClaimable) mBadge.classList.remove('hidden');
+      else mBadge.classList.add('hidden');
+    }
+
+    async function saveUserData() {
+      if (!userData) return;
+      try {
+        localStorage.setItem('winter_runner_8d_user', JSON.stringify(userData));
+      } catch (e) {}
+
+      allPlayersMap[userData.playerId] = { ...userData };
+      updateLobbyUI();
+
+      if (db && currentUserUid) {
+        try {
+          const publicRef = doc(db, 'artifacts', appId, 'public', 'data', 'players', userData.playerId);
+          await setDoc(publicRef, userData, { merge: true });
+        } catch (err) {}
+      }
+    }
+
+    function initFirebaseBackground() {
+      try {
+        if (typeof __firebase_config !== 'undefined') {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          auth = getAuth(app);
+          db = getFirestore(app);
+
+          const authPromise = (typeof __initial_auth_token !== 'undefined' && __initial_auth_token)
+            ? signInWithCustomToken(auth, __initial_auth_token)
+            : signInAnonymously(auth);
+
+          authPromise.then(() => {
+            currentUserUid = auth.currentUser?.uid || null;
+            if (userData) saveUserData();
+
+            const playersCol = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+            onSnapshot(playersCol, (snapshot) => {
+              const freshMap = {};
+              snapshot.forEach((docSnap) => {
+                const d = docSnap.data();
+                if (d && d.playerId && d.name) freshMap[d.playerId] = d;
+              });
+              allPlayersMap = freshMap;
+
+              if (userData && allPlayersMap[userData.playerId]) {
+                const remoteMe = allPlayersMap[userData.playerId];
+                userData.friendRequests = remoteMe.friendRequests || userData.friendRequests || [];
+                userData.friends = remoteMe.friends || userData.friends || [];
+                try {
+                  localStorage.setItem('winter_runner_8d_user', JSON.stringify(userData));
+                } catch (e) {}
+              }
+              updateLobbyUI();
+            });
+          }).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    // --- ANATOMIK SILLIQ ODAM VA VORON (QARG'A) MODELINI YARATISH ---
+    function buildCharacterMesh(skinId = 'cyber_runner') {
+      const skin = CHAR_SKINS.find(s => s.id === skinId) || CHAR_SKINS[0];
+      const c = skin.colors;
+
+      const root = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: c.body, roughness: 0.4, metalness: 0.35 });
+      const armorMat = new THREE.MeshStandardMaterial({ color: c.armor, roughness: 0.25, metalness: 0.65 });
+      const accentMat = new THREE.MeshStandardMaterial({
+        color: c.accent,
+        emissive: c.accent,
+        emissiveIntensity: 0.45,
+        roughness: 0.25
+      });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: c.eyes });
+      const faceSkinMat = new THREE.MeshStandardMaterial({ color: 0xe6c2a5, roughness: 0.55 });
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e1b18, roughness: 0.7 });
+
+      const bodyPivot = new THREE.Group();
+      bodyPivot.position.y = 0.88;
+      root.add(bodyPivot);
+
+      const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.22, 0.22, 16), bodyMat);
+      pelvis.position.y = 0.05;
+      bodyPivot.add(pelvis);
+
+      const chest = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.24, 0.64, 18), bodyMat);
+      chest.position.y = 0.46;
+      chest.castShadow = true;
+      bodyPivot.add(chest);
+
+      [-0.32, 0.32].forEach(sx => {
+        const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 14), armorMat);
+        shoulder.position.set(sx, 0.72, 0);
+        bodyPivot.add(shoulder);
+      });
+
+      const chestArmor = new THREE.Mesh(new THREE.CylinderGeometry(0.325, 0.26, 0.38, 18), armorMat);
+      chestArmor.position.y = 0.56;
+      bodyPivot.add(chestArmor);
+
+      const chestEmblem = new THREE.Mesh(new THREE.OctahedronGeometry(0.1, 0), accentMat);
+      chestEmblem.position.set(0, 0.58, -0.31);
+      bodyPivot.add(chestEmblem);
+
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.14, 12), c.type === 'hoodie' ? faceSkinMat : armorMat);
+      neck.position.y = 0.82;
+      bodyPivot.add(neck);
+
+      const headGroup = new THREE.Group();
+      headGroup.position.y = 1.05;
+      bodyPivot.add(headGroup);
+
+      const headSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 20, 20),
+        c.type === 'hoodie' ? faceSkinMat : armorMat
+      );
+      headSphere.scale.set(0.95, 1.08, 1.02);
+      headSphere.castShadow = true;
+      headGroup.add(headSphere);
+
+      const lEye = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 10), eyeMat);
+      lEye.position.set(-0.085, 0.02, -0.22);
+      const rEye = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 10), eyeMat);
+      rEye.position.set(0.085, 0.02, -0.22);
+      headGroup.add(lEye, rEye);
+
+      if (c.type === 'raven') {
+        const beakMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.85, roughness: 0.2 });
+        const upperBeak = new THREE.Mesh(new THREE.ConeGeometry(0.078, 0.28, 16), beakMat);
+        upperBeak.rotation.x = -Math.PI / 2 - 0.14;
+        upperBeak.position.set(0, -0.02, -0.32);
+        headGroup.add(upperBeak);
+
+        for (let f = -1; f <= 1; f++) {
+          const feather = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.24, 10), armorMat);
+          feather.position.set(f * 0.08, 0.25, 0.03);
+          feather.rotation.x = -0.35;
+          headGroup.add(feather);
+        }
+
+        const featherShape = new THREE.Shape();
+        featherShape.moveTo(0, 0);
+        featherShape.bezierCurveTo(0.18, 0.06, 0.45, -0.05, 0.68, -0.32);
+        featherShape.bezierCurveTo(0.48, -0.36, 0.25, -0.26, 0.04, -0.14);
+        featherShape.closePath();
+
+        const featherGeo = new THREE.ExtrudeGeometry(featherShape, {
+          depth: 0.022,
+          bevelEnabled: true,
+          bevelThickness: 0.008,
+          bevelSize: 0.008,
+          bevelSegments: 2
+        });
+
+        [-1, 1].forEach(side => {
+          const wingGroup = new THREE.Group();
+          wingGroup.position.set(side * 0.22, 0.66, 0.18);
+          wingGroup.rotation.y = side * -0.38;
+
+          for (let w = 0; w < 5; w++) {
+            const fMesh = new THREE.Mesh(featherGeo, w % 2 === 0 ? armorMat : accentMat);
+            const scaleVal = 1.05 - w * 0.12;
+            fMesh.scale.set(side * scaleVal, scaleVal, 1);
+            fMesh.position.set(0, -w * 0.075, w * 0.015);
+            fMesh.rotation.z = side * (0.22 - w * 0.18);
+            wingGroup.add(fMesh);
+          }
+          bodyPivot.add(wingGroup);
+        });
+      } else if (c.type === 'stygian') {
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.028, 12, 28), accentMat);
+        halo.position.set(0, 0.08, 0.22);
+        headGroup.add(halo);
+      } else if (c.type === 'pharaoh') {
+        const crown = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.34, 16), accentMat);
+        crown.position.set(0, 0.24, 0);
+        headGroup.add(crown);
+      } else if (c.type === 'assassin') {
+        const hood = new THREE.Mesh(new THREE.SphereGeometry(0.265, 18, 18), bodyMat);
+        hood.position.set(0, 0.02, 0.03);
+        headGroup.add(hood);
+      } else {
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 8), faceSkinMat);
+        nose.rotation.x = -Math.PI / 2;
+        nose.position.set(0, -0.01, -0.25);
+        const capDome = new THREE.Mesh(new THREE.SphereGeometry(0.248, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.52), accentMat);
+        capDome.position.set(0, 0.02, 0);
+        const capVisor = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.03, 16, 1, false, -Math.PI * 0.35, Math.PI * 0.7), hairMat);
+        capVisor.position.set(0, 0.07, -0.14);
+        headGroup.add(nose, capDome, capVisor);
+      }
+
+      const jetpackGroup = new THREE.Group();
+      jetpackGroup.position.set(0, 0.48, 0.26);
+      jetpackGroup.visible = false;
+      [-0.11, 0.11].forEach(jx => {
+        const tank = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.085, 0.085, 0.56, 14),
+          new THREE.MeshStandardMaterial({ color: 0xf97316, metalness: 0.7, roughness: 0.25 })
+        );
+        tank.position.x = jx;
+        const flame = new THREE.Mesh(
+          new THREE.ConeGeometry(0.075, 0.35, 12),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        flame.rotation.x = Math.PI;
+        flame.position.set(jx, -0.42, 0);
+        jetpackGroup.add(tank, flame);
+      });
+      bodyPivot.add(jetpackGroup);
+
+      function makeArm(side) {
+        const armPivot = new THREE.Group();
+        armPivot.position.set(side * 0.36, 0.68, 0);
+
+        const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.34, 12), armorMat);
+        upperArm.position.y = -0.17;
+        armPivot.add(upperArm);
+
+        const elbow = new THREE.Group();
+        elbow.position.y = -0.34;
+        armPivot.add(elbow);
+
+        const foreArm = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.062, 0.32, 12), bodyMat);
+        foreArm.position.y = -0.16;
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 12), accentMat);
+        hand.position.y = -0.34;
+        elbow.add(foreArm, hand);
+
+        return { armPivot, elbow };
+      }
+
+      const leftArmObj = makeArm(-1);
+      const rightArmObj = makeArm(1);
+      bodyPivot.add(leftArmObj.armPivot, rightArmObj.armPivot);
+
+      function makeLeg(side) {
+        const hipPivot = new THREE.Group();
+        hipPivot.position.set(side * 0.14, 0.86, 0);
+
+        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.095, 0.42, 14), bodyMat);
+        thigh.position.y = -0.21;
+        hipPivot.add(thigh);
+
+        const kneePivot = new THREE.Group();
+        kneePivot.position.y = -0.42;
+        hipPivot.add(kneePivot);
+
+        const kneeSphere = new THREE.Mesh(new THREE.SphereGeometry(0.095, 12, 12), armorMat);
+        kneePivot.add(kneeSphere);
+
+        const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.075, 0.4, 14), bodyMat);
+        shin.position.y = -0.2;
+        kneePivot.add(shin);
+
+        const shoeMat = new THREE.MeshStandardMaterial({ color: c.accent, emissive: c.accent, emissiveIntensity: 0.35, roughness: 0.3 });
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.13, 0.34), shoeMat);
+        shoe.position.set(0, -0.42, -0.06);
+        kneePivot.add(shoe);
+
+        return { hipPivot, kneePivot, shoe, shoeMat };
+      }
+
+      const leftLegObj = makeLeg(-1);
+      const rightLegObj = makeLeg(1);
+      root.add(leftLegObj.hipPivot, rightLegObj.hipPivot);
+
+      return {
+        root,
+        bodyPivot,
+        headGroup,
+        jetpackGroup,
+        leftArm: leftArmObj.armPivot,
+        leftElbow: leftArmObj.elbow,
+        rightArm: rightArmObj.armPivot,
+        rightElbow: rightArmObj.elbow,
+        leftLeg: leftLegObj.hipPivot,
+        leftKnee: leftLegObj.kneePivot,
+        leftShoeMat: leftLegObj.shoeMat,
+        rightLeg: rightLegObj.hipPivot,
+        rightKnee: rightLegObj.kneePivot,
+        rightShoeMat: rightLegObj.shoeMat,
+        defaultAccent: c.accent
+      };
+    }
+
+    function buildHoverboardMesh(boardSkinId = 'ice_wave') {
+      const bSkin = BOARD_SKINS.find(b => b.id === boardSkinId) || BOARD_SKINS[0];
+      const group = new THREE.Group();
+
+      const deck = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.55, 0.55, 2.0, 18),
+        new THREE.MeshStandardMaterial({ color: bSkin.color, metalness: 0.75, roughness: 0.2 })
+      );
+      deck.rotation.x = Math.PI / 2;
+      deck.scale.set(1.05, 1, 0.14);
+
+      const neonRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.62, 0.04, 10, 28),
+        new THREE.MeshBasicMaterial({ color: bSkin.glow })
+      );
+      neonRing.rotation.x = Math.PI / 2;
+      neonRing.scale.set(0.95, 1.65, 1);
+
+      group.add(deck, neonRing);
+      return group;
+    }
+
+    // --- ASOSIY 3D QISHKI SAHNA ---
+    const container = document.getElementById('game-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b142e);
+    scene.fog = new THREE.FogExp2(0x0b142e, 0.014);
+
+    const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 150);
+    camera.position.set(0, 5.2, 8.2);
+    camera.lookAt(0, 1.5, -8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xe0f2fe, 0x1e1b4b, 1.0));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(10, 22, 12);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const LANES = [-2.5, 0, 2.5];
+    const TRAIN_HEIGHT = 3.25;
+    const CRATE_HEIGHT = 1.08; // Qishki yashik balandligi
+
+    const snowGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 300),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.9 })
+    );
+    snowGround.rotation.x = -Math.PI / 2;
+    snowGround.position.set(0, -0.02, -120);
+    snowGround.receiveShadow = true;
+    scene.add(snowGround);
+
+    const trackBed = new THREE.Mesh(
+      new THREE.PlaneGeometry(8.8, 300),
+      new THREE.MeshStandardMaterial({ color: 0x17203d, roughness: 0.8 })
+    );
+    trackBed.rotation.x = -Math.PI / 2;
+    trackBed.position.set(0, 0.01, -120);
+    trackBed.receiveShadow = true;
+    scene.add(trackBed);
+
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
+    LANES.forEach(lx => {
+      [-0.56, 0.56].forEach(offset => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 300), railMat);
+        rail.position.set(lx + offset, 0.05, -120);
+        scene.add(rail);
+      });
+    });
+
+    // --- KARTA CHETLARIGA QORLI UYLAR, ARCHALAR, CANDY CANE VA CHIROQLAR ---
+    const sideScenery = [];
+
+    function createWinterHouse(seed) {
+      const house = new THREE.Group();
+      const width = 4.6 + (seed % 3) * 0.8;
+      const height = 5.5 + (seed % 4) * 1.8;
+      const depth = 6.5;
+
+      const wallColors = [0x1e293b, 0x312e81, 0x334155, 0x1e1b4b];
+      const wall = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        new THREE.MeshStandardMaterial({ color: wallColors[seed % wallColors.length], roughness: 0.7 })
+      );
+      wall.position.y = height / 2;
+      house.add(wall);
+
+      const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(width * 0.78, 2.2, 4),
+        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+      );
+      roof.position.y = height + 1.1;
+      roof.rotation.y = Math.PI / 4;
+      house.add(roof);
+
+      const winMat = new THREE.MeshBasicMaterial({ color: seed % 2 === 0 ? 0xfef08a : 0x7dd3fc });
+      const rows = Math.floor(height / 2.2);
+      for (let r = 0; r < rows; r++) {
+        [-1.3, 1.3].forEach(wz => {
+          const win = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.85, 0.9), winMat);
+          win.position.set(0, 1.6 + r * 2.0, wz);
+          house.add(win);
+        });
+      }
+      return { group: house, halfWidth: width / 2 };
+    }
+
+    function createPineTree() {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.28, 1.1, 8), new THREE.MeshStandardMaterial({ color: 0x451a03 }));
+      trunk.position.y = 0.55;
+      tree.add(trunk);
+
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.8 });
+      const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+
+      [1.5, 2.5, 3.4].forEach((yPos, idx) => {
+        const rad = 1.35 - idx * 0.3;
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(rad, 1.5, 8), leafMat);
+        cone.position.y = yPos;
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(rad * 0.85, 0.55, 8), snowMat);
+        cap.position.y = yPos + 0.48;
+        tree.add(cone, cap);
+      });
+      return tree;
+    }
+
+    function createCandyCanePost() {
+      const cane = new THREE.Group();
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+      for (let s = 0; s < 6; s++) {
+        const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.42, 12), s % 2 === 0 ? redMat : whiteMat);
+        seg.position.y = 0.21 + s * 0.42;
+        cane.add(seg);
+      }
+      const topSphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), redMat);
+      topSphere.position.y = 2.7;
+      cane.add(topSphere);
+      return cane;
+    }
+
+    for (let i = 0; i < 22; i++) {
+      const zPos = -i * 11;
+      [-1, 1].forEach((side, sIdx) => {
+        const hObj = createWinterHouse(i + sIdx);
+        hObj.group.position.set(side * (7.8 + hObj.halfWidth), 0, zPos);
+        hObj.group.children.forEach(ch => {
+          if (ch.geometry?.type === 'BoxGeometry' && ch.geometry.parameters.width < 0.2) {
+            ch.position.x = -side * (hObj.halfWidth + 0.02);
+          }
+        });
+        scene.add(hObj.group);
+        sideScenery.push(hObj.group);
+
+        if (i % 2 === 0) {
+          const tree = createPineTree();
+          tree.position.set(side * 5.6, 0, zPos + 3.5);
+          scene.add(tree);
+          sideScenery.push(tree);
+        } else {
+          const cane = createCandyCanePost();
+          cane.position.set(side * 4.75, 0, zPos + 2.5);
+          scene.add(cane);
+          sideScenery.push(cane);
+        }
+      });
+    }
+
+    const snowCount = 420;
+    const snowGeo = new THREE.BufferGeometry();
+    const snowPositions = new Float32Array(snowCount * 3);
+    for (let i = 0; i < snowCount; i++) {
+      snowPositions[i * 3] = (Math.random() - 0.5) * 26;
+      snowPositions[i * 3 + 1] = Math.random() * 18;
+      snowPositions[i * 3 + 2] = -Math.random() * 100 + 10;
+    }
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    const snowSystem = new THREE.Points(
+      snowGeo,
+      new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.85 })
+    );
+    scene.add(snowSystem);
+
+    // --- O'YINCHI VA SKUTER ---
+    let isHoverboardActive = false;
+    let activeCharRig = buildCharacterMesh('cyber_runner');
+    scene.add(activeCharRig.root);
+
+    let activeBoardMesh = buildHoverboardMesh('ice_wave');
+    activeBoardMesh.position.y = 0.08;
+    activeBoardMesh.visible = false;
+    activeCharRig.root.add(activeBoardMesh);
+
+    function refreshPlayer3DModels() {
+      const charSkinId = userData?.equippedCharSkin || 'cyber_runner';
+      const boardSkinId = userData?.equippedBoardSkin || 'ice_wave';
+
+      const oldPos = activeCharRig.root.position.clone();
+      scene.remove(activeCharRig.root);
+
+      activeCharRig = buildCharacterMesh(charSkinId);
+      activeCharRig.root.position.copy(oldPos);
+      scene.add(activeCharRig.root);
+
+      activeBoardMesh = buildHoverboardMesh(boardSkinId);
+      activeBoardMesh.position.y = 0.08;
+      activeBoardMesh.visible = isHoverboardActive;
+      activeCharRig.root.add(activeBoardMesh);
+    }
+
+    // --- POYEZDLAR, QISHKI YASHIKLAR, OQ-QIZIL BALAND TO'SIQLAR VA TUNELLAR ---
+    let obstacles = [];
+    let coins = [];
+    let powerupItems = [];
+    let tunnels = [];
+    let spawnTimer = 0;
+    let tunnelTimer = 45;
+
+    function createRealisticWinterTrain(withRamp = false) {
+      const trainGroup = new THREE.Group();
+      const length = 8.4;
+
+      const chassis = new THREE.Mesh(
+        new THREE.BoxGeometry(1.92, 0.45, length),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.3 })
+      );
+      chassis.position.y = 0.35;
+      trainGroup.add(chassis);
+
+      const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 2.02, 12);
+      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.9 });
+      [-2.8, -1.6, 1.6, 2.8].forEach(wz => {
+        const w = new THREE.Mesh(wheelGeo, wheelMat);
+        w.rotation.z = Math.PI / 2;
+        w.position.set(0, 0.28, wz);
+        trainGroup.add(w);
+      });
+
+      const bodyMat = new THREE.MeshStandardMaterial({
+        color: withRamp ? 0x4c1d95 : 0x1e3a8a,
+        metalness: 0.45,
+        roughness: 0.25
+      });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.08, 2.55, length), bodyMat);
+      body.position.y = 1.82;
+      body.castShadow = true;
+      trainGroup.add(body);
+
+      const nose = new THREE.Mesh(
+        new THREE.BoxGeometry(2.02, 2.1, 0.55),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6, roughness: 0.2 })
+      );
+      nose.position.set(0, 1.65, length / 2 + 0.18);
+      nose.rotation.x = -0.14;
+      trainGroup.add(nose);
+
+      const frontGlass = new THREE.Mesh(
+        new THREE.BoxGeometry(1.72, 0.85, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.4, roughness: 0.1 })
+      );
+      frontGlass.position.set(0, 2.25, length / 2 + 0.42);
+      frontGlass.rotation.x = -0.14;
+      trainGroup.add(frontGlass);
+
+      const hlMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+      [-0.68, 0.68].forEach(hx => {
+        const hl = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 14), hlMat);
+        hl.rotation.x = Math.PI / 2;
+        hl.position.set(hx, 0.95, length / 2 + 0.46);
+        trainGroup.add(hl);
+      });
+
+      const sideWinMat = new THREE.MeshStandardMaterial({ color: 0x7dd3fc, emissive: 0x0369a1, emissiveIntensity: 0.35 });
+      [-2.5, -0.8, 0.9, 2.6].forEach(wz => {
+        [-1.05, 1.05].forEach(wx => {
+          const win = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.78, 1.15), sideWinMat);
+          win.position.set(wx, 2.05, wz);
+          trainGroup.add(win);
+        });
+      });
+
+      const belt = new THREE.Mesh(
+        new THREE.BoxGeometry(2.12, 0.2, length + 0.1),
+        new THREE.MeshBasicMaterial({ color: withRamp ? 0xfacc15 : 0xa855f7 })
+      );
+      belt.position.y = 1.38;
+      trainGroup.add(belt);
+
+      const acUnit = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.22, 2.2),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.6 })
+      );
+      acUnit.position.set(0, 3.22, -1.2);
+      trainGroup.add(acUnit);
+
+      const snowRoof = new THREE.Mesh(
+        new THREE.BoxGeometry(2.06, 0.18, length),
+        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+      );
+      snowRoof.position.y = 3.16;
+      trainGroup.add(snowRoof);
+
+      if (withRamp) {
+        const rampLen = 4.6;
+        const rampGeo = new THREE.BoxGeometry(1.96, 0.24, rampLen);
+        const rampMat = new THREE.MeshStandardMaterial({
+          color: 0xfacc15,
+          emissive: 0xca8a04,
+          emissiveIntensity: 0.35,
+          roughness: 0.4
+        });
+        const ramp = new THREE.Mesh(rampGeo, rampMat);
+        const angle = Math.atan2(TRAIN_HEIGHT, rampLen);
+        ramp.rotation.x = angle;
+        ramp.position.set(0, TRAIN_HEIGHT / 2, length / 2 + rampLen / 2 - 0.15);
+        trainGroup.add(ramp);
+      }
+
+      return { mesh: trainGroup, length, hasRamp: withRamp, rampLen: withRamp ? 4.6 : 0 };
+    }
+
+    // Qishki bezatilgan oq-qizil yashik ("low" obstacle — ustiga chiqib sakrash mumkin)
+    function createWinterGiftCrate() {
+      const crate = new THREE.Group();
+      const boxW = 1.85;
+      const boxH = 0.96;
+      const boxD = 1.35;
+
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.35 });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.75, roughness: 0.2 });
+
+      // Oq-qizil yo'l-yo'l asosiy korpus
+      const stripeCount = 5;
+      const stripeW = boxW / stripeCount;
+      for (let i = 0; i < stripeCount; i++) {
+        const seg = new THREE.Mesh(
+          new THREE.BoxGeometry(stripeW, boxH, boxD),
+          i % 2 === 0 ? redMat : whiteMat
+        );
+        seg.position.set(-boxW / 2 + stripeW / 2 + i * stripeW, boxH / 2, 0);
+        seg.castShadow = true;
+        crate.add(seg);
+      }
+
+      // Oltin burchak ramkalar va bayram lentasi
+      const ribbonZ = new THREE.Mesh(new THREE.BoxGeometry(0.24, boxH + 0.03, boxD + 0.04), goldMat);
+      ribbonZ.position.y = boxH / 2;
+      const ribbonX = new THREE.Mesh(new THREE.BoxGeometry(boxW + 0.04, 0.2, boxD + 0.04), goldMat);
+      ribbonX.position.y = boxH / 2;
+      crate.add(ribbonZ, ribbonX);
+
+      // Ustida qalin qishki qor qopqog'i (CRATE_HEIGHT = 1.08 gacha)
+      const snowCap = new THREE.Mesh(
+        new THREE.BoxGeometry(boxW + 0.08, 0.14, boxD + 0.08),
+        whiteMat
+      );
+      snowCap.position.y = boxH + 0.06;
+      crate.add(snowCap);
+
+      return { mesh: crate, halfLen: boxD / 2 };
+    }
+
+    // Pastidan sirg'anib o'tiladigan balandroq oq-qizil bayramona arkali to'siq ("high" obstacle)
+    function createWinterHighBarrier() {
+      const barrier = new THREE.Group();
+      const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.3 });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.4, metalness: 0.7 });
+
+      // Yon oq-qizil Candy Cane ustunlar (balandroq: 3.1)
+      [-0.98, 0.98].forEach(px => {
+        for (let s = 0; s < 6; s++) {
+          const seg = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.11, 0.11, 0.52, 12),
+            s % 2 === 0 ? redMat : whiteMat
+          );
+          seg.position.set(px, 0.26 + s * 0.52, 0);
+          barrier.add(seg);
+        }
+        // Tepasida oltin shar bezak
+        const ornament = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 14), goldMat);
+        ornament.position.set(px, 3.22, 0);
+        barrier.add(ornament);
+      });
+
+      // Yuqori ko'ndalang oq-qizil chiziqli to'sin (ostki qismi yerdan 1.48 balandda — silliq sirpanish uchun)
+      const beamY = 2.15;
+      const beamH = 1.25;
+      const segCount = 6;
+      const segW = 2.08 / segCount;
+      for (let i = 0; i < segCount; i++) {
+        const bSeg = new THREE.Mesh(
+          new THREE.BoxGeometry(segW, beamH, 0.46),
+          i % 2 === 0 ? redMat : whiteMat
+        );
+        bSeg.position.set(-1.04 + segW / 2 + i * segW, beamY, 0);
+        bSeg.castShadow = true;
+        barrier.add(bSeg);
+      }
+
+      // To'sin ustida qalin qor qatlami
+      const snowTop = new THREE.Mesh(
+        new THREE.BoxGeometry(2.16, 0.18, 0.54),
+        whiteMat
+      );
+      snowTop.position.set(0, beamY + beamH / 2 + 0.08, 0);
+      barrier.add(snowTop);
+
+      return { mesh: barrier, halfLen: 0.35 };
+    }
+
+    // Baland tunnel (height 7.5 — poyezd tomida sakraganda ham tomga tegmaydi)
+    function createWinterTunnel() {
+      const tunnelGroup = new THREE.Group();
+      const tLen = 22;
+      const archRadius = 7.5;
+      const archBaseY = 0.0;
+
+      const archMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.75, side: THREE.DoubleSide });
+      const arch = new THREE.Mesh(
+        new THREE.CylinderGeometry(archRadius, archRadius, tLen, 26, 1, true, 0, Math.PI),
+        archMat
+      );
+      arch.rotation.z = Math.PI / 2;
+      arch.rotation.y = Math.PI / 2;
+      arch.position.y = archBaseY;
+      tunnelGroup.add(arch);
+
+      [-tLen / 2, tLen / 2].forEach(ez => {
+        const portal = new THREE.Mesh(
+          new THREE.TorusGeometry(archRadius, 0.45, 12, 30, Math.PI),
+          new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 })
+        );
+        portal.position.set(0, archBaseY, ez);
+        tunnelGroup.add(portal);
+      });
+
+      [-6, 0, 6].forEach(lz => {
+        const lamp = new THREE.Mesh(
+          new THREE.BoxGeometry(2.8, 0.15, 0.55),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+        );
+        lamp.position.set(0, archBaseY + archRadius - 0.25, lz);
+        tunnelGroup.add(lamp);
+      });
+
+      tunnelGroup.position.set(0, 0, -118);
+      scene.add(tunnelGroup);
+      tunnels.push({ mesh: tunnelGroup, length: tLen });
+    }
+
+    function spawnCoinLine(lane, yHeight, startZ, count) {
+      const coinGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.14, 18);
+      const coinMat = new THREE.MeshStandardMaterial({
+        color: 0xfacc15,
+        emissive: 0xca8a04,
+        emissiveIntensity: 0.55,
+        metalness: 0.65,
+        roughness: 0.2
+      });
+      for (let c = 0; c < count; c++) {
+        const coin = new THREE.Mesh(coinGeo, coinMat);
+        coin.rotation.x = Math.PI / 2;
+        coin.position.set(LANES[lane], yHeight, startZ - c * 2.1);
+        scene.add(coin);
+        coins.push(coin);
+      }
+    }
+
+    function spawnPowerupItem(lane, yHeight, zPos) {
+      const types = ['sneakers', 'jetpack', 'star'];
+      const pType = types[Math.floor(Math.random() * types.length)];
+      const group = new THREE.Group();
+
+      if (pType === 'sneakers') {
+        const shoe = new THREE.Mesh(
+          new THREE.BoxGeometry(0.65, 0.42, 0.95),
+          new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, emissiveIntensity: 0.6 })
+        );
+        const wing = new THREE.Mesh(
+          new THREE.BoxGeometry(0.95, 0.18, 0.35),
+          new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+        );
+        wing.position.y = 0.12;
+        group.add(shoe, wing);
+      } else if (pType === 'jetpack') {
+        const body = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.28, 0.32, 1.05, 16),
+          new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xea580c, emissiveIntensity: 0.6 })
+        );
+        const tip = new THREE.Mesh(
+          new THREE.ConeGeometry(0.28, 0.42, 16),
+          new THREE.MeshBasicMaterial({ color: 0xfef08a })
+        );
+        tip.position.y = 0.72;
+        group.add(body, tip);
+      } else {
+        const star = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.55, 0),
+          new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xeab308, emissiveIntensity: 0.75 })
+        );
+        group.add(star);
+      }
+
+      group.position.set(LANES[lane], yHeight, zPos);
+      scene.add(group);
+      powerupItems.push({ mesh: group, type: pType });
+    }
+
+    function spawnObstacleRow() {
+      const laneIndices = [0, 1, 2].sort(() => Math.random() - 0.5);
+      const count = Math.random() > 0.35 ? 2 : 1;
+
+      for (let i = 0; i < count; i++) {
+        const lane = laneIndices[i];
+        const r = Math.random();
+
+        if (r < 0.24) {
+          const tObj = createRealisticWinterTrain(true);
+          tObj.mesh.position.set(LANES[lane], 0, -105);
+          scene.add(tObj.mesh);
+          obstacles.push({
+            mesh: tObj.mesh,
+            type: 'train',
+            hasRamp: true,
+            halfLen: tObj.length / 2,
+            rampLen: tObj.rampLen
+          });
+          spawnCoinLine(lane, TRAIN_HEIGHT + 0.75, -102, 5);
+        } else if (r < 0.56) {
+          const tObj = createRealisticWinterTrain(false);
+          tObj.mesh.position.set(LANES[lane], 0, -105);
+          scene.add(tObj.mesh);
+          obstacles.push({
+            mesh: tObj.mesh,
+            type: 'train',
+            hasRamp: false,
+            halfLen: tObj.length / 2,
+            rampLen: 0
+          });
+          if (Math.random() > 0.4) {
+            spawnCoinLine(lane, TRAIN_HEIGHT + 0.75, -102, 4);
+          }
+        } else if (r < 0.78) {
+          const cObj = createWinterGiftCrate();
+          cObj.mesh.position.set(LANES[lane], 0, -100);
+          scene.add(cObj.mesh);
+          obstacles.push({ mesh: cObj.mesh, type: 'low', halfLen: cObj.halfLen });
+          if (Math.random() > 0.45) {
+            spawnCoinLine(lane, CRATE_HEIGHT + 0.7, -99, 2);
+          }
+        } else {
+          const bObj = createWinterHighBarrier();
+          bObj.mesh.position.set(LANES[lane], 0, -100);
+          scene.add(bObj.mesh);
+          obstacles.push({ mesh: bObj.mesh, type: 'high', halfLen: bObj.halfLen });
+        }
+      }
+
+      const freeLane = laneIndices[count];
+      if (freeLane !== undefined) {
+        if (Math.random() < 0.24) {
+          spawnPowerupItem(freeLane, 0.9, -98);
+        } else if (Math.random() > 0.2) {
+          spawnCoinLine(freeLane, 0.85, -96, 4);
+        }
+      }
+    }
+
+    // --- O'YIN MEXANIKASI VA SLOW-MOTION YIQILISH ANIMATSIYASI ---
+    let isPlaying = false;
+    let isDying = false;
+    let deathTimer = 0;
+    const DEATH_DURATION = 1.35;
+
+    let currentLane = 1;
+    let runDistance = 0;
+    let runCoins = 0;
+
+    const BASE_SPEED = 16.5;
+    const MAX_SPEED = 31.0;
+    let gameSpeed = BASE_SPEED;
+    let runCycle = 0;
+
+    let playerY = 0;
+    let groundHeight = 0;
+    let velocityY = 0;
+    const GRAVITY = -36;
+    const BASE_JUMP_FORCE = 14.2;
+
+    let isGrounded = true;
+    let isSliding = false;
+    let slideTimer = 0;
+
+    let hoverboardTimer = 0;
+    const HOVERBOARD_DURATION = 12;
+
+    let sneakersTimer = 0;
+    const SNEAKERS_DURATION = 14;
+
+    let jetpackTimer = 0;
+    const JETPACK_DURATION = 10;
+    let jetpackCoinSpawnTimer = 0;
+
+    let starTimer = 0;
+    const STAR_DURATION = 15;
+
+    function activatePowerup(type) {
+      if (type === 'sneakers') {
+        sneakersTimer = SNEAKERS_DURATION;
+        activeCharRig.leftShoeMat.color.setHex(0x22c55e);
+        activeCharRig.leftShoeMat.emissive.setHex(0x22c55e);
+        activeCharRig.rightShoeMat.color.setHex(0x22c55e);
+        activeCharRig.rightShoeMat.emissive.setHex(0x22c55e);
+        document.getElementById('pu-sneakers-box').classList.remove('hidden');
+        showToast('👟 Super Krossovkalar! (2x baland sakrash)');
+      } else if (type === 'jetpack') {
+        jetpackTimer = JETPACK_DURATION;
+        endSlide();
+        activeCharRig.jetpackGroup.visible = true;
+        document.getElementById('pu-jetpack-box').classList.remove('hidden');
+        showToast('🚀 Raketa faollashdi! Osmondan tanga yig\'ing!');
+      } else if (type === 'star') {
+        starTimer = STAR_DURATION;
+        document.getElementById('pu-star-box').classList.remove('hidden');
+        document.getElementById('hud-2x-badge').classList.remove('hidden');
+        showToast('⭐ 2X Yulduzcha! Masofa ballari 2 barobar tez oshadi!');
+      }
+    }
+
+    function activateHoverboard() {
+      if (!isPlaying || isDying || isHoverboardActive || jetpackTimer > 0 || !userData) return;
+      if ((userData.boardsCount || 0) <= 0) {
+        showToast('🛹 Skuter tugagan! Shop dan 250 tangaga oling.');
+        return;
+      }
+
+      userData.boardsCount -= 1;
+      userData.stats.boardsUsed = (userData.stats.boardsUsed || 0) + 1;
+      saveUserData();
+
+      isHoverboardActive = true;
+      hoverboardTimer = HOVERBOARD_DURATION;
+      activeBoardMesh.visible = true;
+      endSlide();
+
+      document.getElementById('hud-boards').textContent = userData.boardsCount;
+      document.getElementById('pu-board-box').classList.remove('hidden');
+      showToast('⚡ Skuter faollashdi! (12 soniya himoya)');
+    }
+
+    function deactivateHoverboard() {
+      isHoverboardActive = false;
+      hoverboardTimer = 0;
+      activeBoardMesh.visible = false;
+      document.getElementById('pu-board-box').classList.add('hidden');
+    }
+
+    function moveLeft() {
+      if (isPlaying && !isDying && currentLane > 0) currentLane--;
+    }
+    function moveRight() {
+      if (isPlaying && !isDying && currentLane < 2) currentLane++;
+    }
+    function jump() {
+      if (!isPlaying || isDying || jetpackTimer > 0) return;
+      if (isGrounded) {
+        const mult = sneakersTimer > 0 ? 1.42 : 1.0;
+        velocityY = BASE_JUMP_FORCE * mult;
+        isGrounded = false;
+        endSlide();
+      }
+    }
+    function slide() {
+      if (!isPlaying || isDying || jetpackTimer > 0) return;
+      if (!isGrounded) velocityY = -26;
+      isSliding = true;
+      slideTimer = 0.72;
+    }
+    function endSlide() {
+      isSliding = false;
+      activeCharRig.bodyPivot.rotation.x = 0;
+      activeCharRig.bodyPivot.position.y = 0.88;
+      activeCharRig.leftLeg.position.y = 0.86;
+      activeCharRig.rightLeg.position.y = 0.86;
+    }
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastTapTime = 0;
+
+    window.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      if (!isPlaying || isDying) return;
+      const dx = e.changedTouches[0].screenX - touchStartX;
+      const dy = e.changedTouches[0].screenY - touchStartY;
+      const minSwipe = 25;
+
+      if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) {
+        const now = Date.now();
+        if (now - lastTapTime < 320) {
+          activateHoverboard();
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+        }
+        return;
+      }
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        dx > 0 ? moveRight() : moveLeft();
+      } else {
+        dy < 0 ? jump() : slide();
+      }
+    }, { passive: true });
+
+    window.addEventListener('dblclick', () => {
+      if (isPlaying && !isDying) activateHoverboard();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W' || e.key === ' ') jump();
+      if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') slide();
+      if (e.key === 'e' || e.key === 'E' || e.key === 'Enter') activateHoverboard();
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function startNewRun() {
+      if (!userData) {
+        document.getElementById('register-modal').classList.remove('hidden');
+        return;
+      }
+
+      obstacles.forEach(o => scene.remove(o.mesh));
+      coins.forEach(c => scene.remove(c));
+      powerupItems.forEach(p => scene.remove(p.mesh));
+      tunnels.forEach(t => scene.remove(t.mesh));
+      obstacles = [];
+      coins = [];
+      powerupItems = [];
+      tunnels = [];
+
+      currentLane = 1;
+      activeCharRig.root.position.set(0, 0, 0);
+      activeCharRig.root.rotation.set(0, 0, 0);
+      playerY = 0;
+      groundHeight = 0;
+      velocityY = 0;
+      isGrounded = true;
+      endSlide();
+      deactivateHoverboard();
+
+      sneakersTimer = 0;
+      jetpackTimer = 0;
+      starTimer = 0;
+      activeCharRig.jetpackGroup.visible = false;
+      activeCharRig.leftShoeMat.color.setHex(activeCharRig.defaultAccent);
+      activeCharRig.leftShoeMat.emissive.setHex(activeCharRig.defaultAccent);
+      activeCharRig.rightShoeMat.color.setHex(activeCharRig.defaultAccent);
+      activeCharRig.rightShoeMat.emissive.setHex(activeCharRig.defaultAccent);
+
+      ['pu-board-box', 'pu-sneakers-box', 'pu-jetpack-box', 'pu-star-box', 'hud-2x-badge'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+
+      runDistance = 0;
+      runCoins = 0;
+      gameSpeed = BASE_SPEED;
+      spawnTimer = 0;
+      tunnelTimer = 42;
+      isDying = false;
+      deathTimer = 0;
+      isPlaying = true;
+
+      document.getElementById('lobby-screen').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('game-hud').classList.remove('hidden');
+      document.getElementById('powerups-hud').classList.remove('hidden');
+      document.getElementById('double-tap-tip').classList.remove('hidden');
+      document.getElementById('hud-boards').textContent = userData.boardsCount;
+      document.getElementById('hud-coins').textContent = '0';
+      document.getElementById('hud-dist').textContent = '0 m';
+    }
+
+    // Sekinlashtirilgan (Slow-Motion) o'lish animatsiyasini boshlash
+    function triggerSlowDeath() {
+      if (isDying) return;
+      isDying = true;
+      deathTimer = DEATH_DURATION;
+      endSlide();
+      deactivateHoverboard();
+      activeCharRig.jetpackGroup.visible = false;
+      velocityY = 7.5; // Urilganda biroz orqaga sakrab yiqiladi
+      document.getElementById('double-tap-tip').classList.add('hidden');
+    }
+
+    function finishRun() {
+      isPlaying = false;
+      isDying = false;
+      deactivateHoverboard();
+      activeCharRig.jetpackGroup.visible = false;
+
+      const distInt = Math.floor(runDistance);
+      userData.coins = (userData.coins || 0) + runCoins;
+      if (distInt > (userData.bestDist || 0)) {
+        userData.bestDist = distInt;
+      }
+      userData.stats = userData.stats || { totalDist: 0, totalCoins: 0, boardsUsed: 0, bestDist: 0 };
+      userData.stats.totalDist += distInt;
+      userData.stats.totalCoins += runCoins;
+      if (distInt > (userData.stats.bestDist || 0)) {
+        userData.stats.bestDist = distInt;
+      }
+      saveUserData();
+
+      document.getElementById('game-hud').classList.add('hidden');
+      document.getElementById('powerups-hud').classList.add('hidden');
+      document.getElementById('double-tap-tip').classList.add('hidden');
+      document.getElementById('go-dist').textContent = `${distInt} m`;
+      document.getElementById('go-coins').textContent = `+${runCoins}`;
+      document.getElementById('gameover-modal').classList.remove('hidden');
+    }
+
+    // --- SHOP RENDERING ---
+    let activeShopTab = 'chars';
+    let shopPreviewAnimIds = [];
+
+    function clearShopPreviews() {
+      shopPreviewAnimIds.forEach(id => cancelAnimationFrame(id));
+      shopPreviewAnimIds = [];
+    }
+
+    function mountCard3DPreview(containerEl, type, itemId) {
+      try {
+        const w = 72;
+        const h = 78;
+        const pScene = new THREE.Scene();
+        const pCam = new THREE.PerspectiveCamera(42, w / h, 0.1, 20);
+        if (type === 'char') {
+          pCam.position.set(0, 1.25, 3.1);
+          pCam.lookAt(0, 1.05, 0);
+        } else {
+          pCam.position.set(0, 1.55, 2.5);
+          pCam.lookAt(0, 0.1, 0);
+        }
+
+        const pRen = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        pRen.setSize(w, h);
+        pRen.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        containerEl.innerHTML = '';
+        containerEl.appendChild(pRen.domElement);
+
+        pScene.add(new THREE.AmbientLight(0xffffff, 1.05));
+        const dLight = new THREE.DirectionalLight(0xc084fc, 1.4);
+        dLight.position.set(2, 4, 3);
+        pScene.add(dLight);
+
+        let meshObj;
+        if (type === 'char') {
+          const rig = buildCharacterMesh(itemId);
+          rig.root.rotation.y = Math.PI;
+          meshObj = rig.root;
+        } else {
+          meshObj = buildHoverboardMesh(itemId);
+          meshObj.rotation.x = 0.25;
+        }
+        pScene.add(meshObj);
+
+        function loop() {
+          const id = requestAnimationFrame(loop);
+          shopPreviewAnimIds.push(id);
+          meshObj.rotation.y += 0.025;
+          pRen.render(pScene, pCam);
+        }
+        loop();
+      } catch (e) {
+        containerEl.innerHTML = getSkinPreviewSVG(itemId);
+      }
+    }
+
+    function renderShop() {
+      clearShopPreviews();
+      const list = document.getElementById('shop-list');
+      list.innerHTML = '';
+
+      if (activeShopTab === 'chars') {
+        CHAR_SKINS.filter(s => s.price > 0).forEach(s => {
+          const owned = (userData.ownedCharSkins || []).includes(s.id);
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="skin-thumb">${getSkinPreviewSVG(s.id)}</div>
+            <div class="item-info">
+              <span class="rarity-tag ${s.rarityClass}">${s.rarity}</span>
+              <h4>${s.name}</h4>
+              <p>${s.desc}</p>
+            </div>
+            <button class="action-btn ${owned ? 'equipped' : ''}" ${owned ? 'disabled' : ''}>
+              ${owned ? 'Olingan ✓' : `🪙 ${s.price}`}
+            </button>
+          `;
+          mountCard3DPreview(card.querySelector('.skin-thumb'), 'char', s.id);
+          if (!owned) {
+            card.querySelector('button').addEventListener('click', () => {
+              if (userData.coins < s.price) {
+                showToast('❌ Tanga yetarli emas!');
+                return;
+              }
+              userData.coins -= s.price;
+              userData.ownedCharSkins.push(s.id);
+              userData.equippedCharSkin = s.id;
+              refreshPlayer3DModels();
+              saveUserData();
+              renderShop();
+              showToast(`🔥 "${s.name}" sotib olindi va kiyildi!`);
+            });
+          }
+          list.appendChild(card);
+        });
+      } else {
+        const packCard = document.createElement('div');
+        packCard.className = 'item-card';
+        packCard.style.borderColor = '#a855f7';
+        packCard.innerHTML = `
+          <div class="skin-thumb">${getSkinPreviewSVG(userData.equippedBoardSkin || 'ice_wave')}</div>
+          <div class="item-info">
+            <span class="rarity-tag rarity-epic">Sarflanuvchi</span>
+            <h4>+1 ta Skuter</h4>
+            <p>O'yinda 2 marta bosganda chiqadi. Sizda: <strong>${userData.boardsCount} ta</strong></p>
+          </div>
+          <button class="action-btn" id="buy-one-board-btn">🪙 250</button>
+        `;
+        mountCard3DPreview(packCard.querySelector('.skin-thumb'), 'board', userData.equippedBoardSkin || 'ice_wave');
+        list.appendChild(packCard);
+
+        packCard.querySelector('#buy-one-board-btn').addEventListener('click', () => {
+          if (userData.coins < 250) {
+            showToast('❌ Tanga yetarli emas! (250 tanga kerak)');
+            return;
+          }
+          userData.coins -= 250;
+          userData.boardsCount += 1;
+          saveUserData();
+          renderShop();
+          showToast('✅ +1 ta Skuter sotib olindi!');
+        });
+
+        BOARD_SKINS.filter(b => b.price > 0).forEach(b => {
+          const owned = (userData.ownedBoardSkins || []).includes(b.id);
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="skin-thumb">${getSkinPreviewSVG(b.id)}</div>
+            <div class="item-info">
+              <span class="rarity-tag ${b.rarityClass}">${b.rarity}</span>
+              <h4>${b.name}</h4>
+              <p>${b.desc}</p>
+            </div>
+            <button class="action-btn ${owned ? 'equipped' : ''}" ${owned ? 'disabled' : ''}>
+              ${owned ? 'Olingan ✓' : `🪙 ${b.price}`}
+            </button>
+          `;
+          mountCard3DPreview(card.querySelector('.skin-thumb'), 'board', b.id);
+          if (!owned) {
+            card.querySelector('button').addEventListener('click', () => {
+              if (userData.coins < b.price) {
+                showToast('❌ Tanga yetarli emas!');
+                return;
+              }
+              userData.coins -= b.price;
+              userData.ownedBoardSkins.push(b.id);
+              userData.equippedBoardSkin = b.id;
+              refreshPlayer3DModels();
+              saveUserData();
+              renderShop();
+              showToast(`🎉 "${b.name}" skuter skini ochildi!`);
+            });
+          }
+          list.appendChild(card);
+        });
+      }
+    }
+
+    // --- MISSIONS RENDERING ---
+    function renderMissions() {
+      const list = document.getElementById('missions-list');
+      list.innerHTML = '';
+
+      MISSIONS_DEF.forEach(m => {
+        const currentVal = userData.stats?.[m.statKey] || 0;
+        const pct = Math.min(100, Math.floor((currentVal / m.target) * 100));
+        const claimed = (userData.claimedMissions || []).includes(m.id);
+        const ready = !claimed && currentVal >= m.target;
+
+        const card = document.createElement('div');
+        card.className = 'item-card';
+        card.innerHTML = `
+          <div class="item-info" style="flex:1;">
+            <h4>${m.title}</h4>
+            <p>${m.desc} (${Math.min(currentVal, m.target)} / ${m.target})</p>
+            <p style="color:#c084fc; font-weight:700; margin-top:3px;">Mukofot: 🪙 +${m.rewardCoins} va ${m.frameLabel}</p>
+            <div class="prog-track"><div class="prog-fill" style="width:${pct}%;"></div></div>
+          </div>
+          <button class="action-btn ${claimed ? 'claimed' : ''}" ${!ready ? 'disabled' : ''}>
+            ${claimed ? 'Olingan ✓' : ready ? 'Olish (Claim)' : `${pct}%`}
+          </button>
+        `;
+
+        if (ready) {
+          card.querySelector('button').addEventListener('click', () => {
+            userData.claimedMissions.push(m.id);
+            userData.coins += m.rewardCoins;
+            if (!userData.ownedFrames.includes(m.rewardFrame)) {
+              userData.ownedFrames.push(m.rewardFrame);
+            }
+            userData.equippedFrame = m.rewardFrame;
+            saveUserData();
+            renderMissions();
+            showToast(`🏅 ${m.frameLabel} va +${m.rewardCoins} tanga olindi!`);
+          });
+        }
+        list.appendChild(card);
+      });
+    }
+
+    // --- SKINS (FAQAT SOTIB OLINGAN SKINLAR) ---
+    let activeSkinTab = 'chars';
+    function renderOwnedSkins() {
+      const list = document.getElementById('owned-skins-list');
+      list.innerHTML = '';
+
+      if (activeSkinTab === 'chars') {
+        const ownedList = CHAR_SKINS.filter(s => (userData.ownedCharSkins || ['cyber_runner']).includes(s.id));
+        ownedList.forEach(s => {
+          const isEquipped = userData.equippedCharSkin === s.id;
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="skin-thumb">${getSkinPreviewSVG(s.id)}</div>
+            <div class="item-info">
+              <span class="rarity-tag ${s.rarityClass}">${s.rarity}</span>
+              <h4>${s.name}</h4>
+              <p>${s.desc}</p>
+            </div>
+            <button class="action-btn ${isEquipped ? 'equipped' : ''}">
+              ${isEquipped ? 'Kiyilgan ✓' : 'Tanlash'}
+            </button>
+          `;
+          card.querySelector('button').addEventListener('click', () => {
+            userData.equippedCharSkin = s.id;
+            refreshPlayer3DModels();
+            saveUserData();
+            renderOwnedSkins();
+            showToast(`👕 ${s.name} tanlandi!`);
+          });
+          list.appendChild(card);
+        });
+      } else {
+        const ownedBoards = BOARD_SKINS.filter(b => (userData.ownedBoardSkins || ['ice_wave']).includes(b.id));
+        ownedBoards.forEach(b => {
+          const isEquipped = userData.equippedBoardSkin === b.id;
+          const card = document.createElement('div');
+          card.className = 'item-card';
+          card.innerHTML = `
+            <div class="skin-thumb">${getSkinPreviewSVG(b.id)}</div>
+            <div class="item-info">
+              <span class="rarity-tag ${b.rarityClass}">${b.rarity}</span>
+              <h4>${b.name}</h4>
+              <p>${b.desc}</p>
+            </div>
+            <button class="action-btn ${isEquipped ? 'equipped' : ''}">
+              ${isEquipped ? 'Tanlangan ✓' : 'Tanlash'}
+            </button>
+          `;
+          card.querySelector('button').addEventListener('click', () => {
+            userData.equippedBoardSkin = b.id;
+            refreshPlayer3DModels();
+            saveUserData();
+            renderOwnedSkins();
+            showToast(`🛹 ${b.name} tanlandi!`);
+          });
+          list.appendChild(card);
+        });
+      }
+    }
+
+    // --- DO'STLAR (DRUZYA) ---
+    function renderFriends() {
+      const box = document.getElementById('friends-content');
+      box.innerHTML = '';
+
+      const reqs = userData.friendRequests || [];
+      if (reqs.length > 0) {
+        const reqTitle = document.createElement('h4');
+        reqTitle.style.cssText = 'font-size:13px; color:#f472b6; margin-bottom:4px;';
+        reqTitle.textContent = `📩 Yangi do'stlik so'rovlari (${reqs.length}):`;
+        box.appendChild(reqTitle);
+
+        reqs.forEach(reqId => {
+          const sender = allPlayersMap[reqId] || { name: `O'yinchi (${reqId})`, playerId: reqId, avatar: '🏂', equippedFrame: 'none' };
+          const row = document.createElement('div');
+          row.className = 'item-card';
+          row.innerHTML = `
+            <div class="item-info">
+              <h4>${sender.avatar || '🏂'} ${sender.name}</h4>
+              <p>ID: ${sender.playerId}</p>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="action-btn accept-btn" style="background:#16a34a;">Qabul</button>
+              <button class="action-btn decline-btn" style="background:#dc2626;">Rad</button>
+            </div>
+          `;
+
+          row.querySelector('.accept-btn').addEventListener('click', async () => {
+            userData.friendRequests = userData.friendRequests.filter(id => id !== reqId);
+            if (!userData.friends.includes(reqId)) userData.friends.push(reqId);
+            await saveUserData();
+
+            if (db && allPlayersMap[reqId]) {
+              const targetData = { ...allPlayersMap[reqId] };
+              targetData.friends = targetData.friends || [];
+              if (!targetData.friends.includes(userData.playerId)) {
+                targetData.friends.push(userData.playerId);
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', reqId), targetData, { merge: true });
+              }
+            }
+            renderFriends();
+            showToast(`🤝 ${sender.name} do'stlar ro'yxatiga qo'shildi!`);
+          });
+
+          row.querySelector('.decline-btn').addEventListener('click', async () => {
+            userData.friendRequests = userData.friendRequests.filter(id => id !== reqId);
+            await saveUserData();
+            renderFriends();
+          });
+
+          box.appendChild(row);
+        });
+      }
+
+      const fTitle = document.createElement('h4');
+      fTitle.style.cssText = 'font-size:13px; color:#cbd5e1; margin-top:4px;';
+      fTitle.textContent = `👥 Mening do'stlarim (${(userData.friends || []).length}):`;
+      box.appendChild(fTitle);
+
+      if (!userData.friends || userData.friends.length === 0) {
+        const empty = document.createElement('p');
+        empty.style.cssText = 'font-size:12px; color:#94a3b8; text-align:center; padding:16px;';
+        empty.textContent = 'Hozircha do\'stlaringiz yo\'q. Yuqoriga do\'stingizning 8 xonali ID raqamini kiritib "Druzya tashlash" tugmasini bosing.';
+        box.appendChild(empty);
+      } else {
+        userData.friends.forEach(fid => {
+          const friendObj = allPlayersMap[fid];
+          if (!friendObj) return;
+          const frameCss = (PROFILE_FRAMES.find(f => f.id === friendObj.equippedFrame) || PROFILE_FRAMES[0]).css;
+          const row = document.createElement('div');
+          row.className = 'player-row';
+          row.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="avatar-frame ${frameCss}" style="width:42px; height:42px; font-size:20px;">${friendObj.avatar || '🏂'}</div>
+              <div>
+                <div style="font-weight:800; font-size:14px;">${friendObj.name}</div>
+                <div style="font-size:11px; color:#a5b4fc;">ID: ${friendObj.playerId}</div>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:13px; font-weight:800; color:#38bdf8;">${friendObj.bestDist || 0} m</div>
+              <div style="font-size:10px; color:#c084fc;">Profilni ko'rish ▸</div>
+            </div>
+          `;
+          row.addEventListener('click', () => openPlayerProfileModal(friendObj));
+          box.appendChild(row);
+        });
+      }
+    }
+
+    // --- TOP-20 REYTING ---
+    function renderTop20Ranking() {
+      const list = document.getElementById('ranking-list');
+      list.innerHTML = '';
+
+      if (userData) allPlayersMap[userData.playerId] = { ...userData };
+
+      const realPlayers = Object.values(allPlayersMap)
+        .filter(p => p && p.name && p.playerId)
+        .sort((a, b) => (b.bestDist || 0) - (a.bestDist || 0))
+        .slice(0, 20);
+
+      if (realPlayers.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:#94a3b8; font-size:13px; padding:20px;">Hozircha reytingda o\'yinchilar yo\'q.</p>';
+        return;
+      }
+
+      realPlayers.forEach((p, idx) => {
+        const rank = idx + 1;
+        const frameCss = (PROFILE_FRAMES.find(f => f.id === p.equippedFrame) || PROFILE_FRAMES[0]).css;
+        const isMe = userData && p.playerId === userData.playerId;
+
+        const row = document.createElement('div');
+        row.className = 'player-row';
+        if (isMe) row.style.borderColor = '#38bdf8';
+
+        row.innerHTML = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="rank-num ${rank <= 3 ? 'rank-' + rank : ''}">#${rank}</div>
+            <div class="avatar-frame ${frameCss}" style="width:40px; height:40px; font-size:19px;">${p.avatar || '🏂'}</div>
+            <div>
+              <div style="font-weight:800; font-size:14px;">${p.name} ${isMe ? '(Siz)' : ''}</div>
+              <div style="font-size:11px; color:#94a3b8;">ID: ${p.playerId}</div>
+            </div>
+          </div>
+          <div style="font-weight:900; font-size:14px; color:#38bdf8;">${p.bestDist || 0} m</div>
+        `;
+        row.addEventListener('click', () => openPlayerProfileModal(p));
+        list.appendChild(row);
+      });
+    }
+
+    // --- JONLI 3D PROFIL OYNASI ---
+    let pvScene = null, pvCamera = null, pvRenderer = null, pvRig = null, pvAnimId = null;
+
+    function openPlayerProfileModal(playerObj) {
+      const isMe = userData && playerObj.playerId === userData.playerId;
+      document.getElementById('pv-modal-title').textContent = isMe ? 'Mening Profilim' : 'Ishtirokchi Profili';
+      document.getElementById('pv-name').textContent = playerObj.name;
+      document.getElementById('pv-id').textContent = playerObj.playerId;
+      document.getElementById('pv-best-dist').textContent = `${playerObj.bestDist || 0} m`;
+      document.getElementById('pv-avatar-icon').textContent = playerObj.avatar || '🏂';
+
+      const skinObj = CHAR_SKINS.find(s => s.id === (playerObj.equippedCharSkin || 'cyber_runner')) || CHAR_SKINS[0];
+      document.getElementById('pv-skin-name').textContent = skinObj.name;
+
+      const frameObj = PROFILE_FRAMES.find(f => f.id === (playerObj.equippedFrame || 'none')) || PROFILE_FRAMES[0];
+      document.getElementById('pv-avatar-frame').className = `avatar-frame ${frameObj.css}`;
+
+      const customizer = document.getElementById('own-profile-customizer');
+      if (isMe) {
+        customizer.classList.remove('hidden');
+        const avRow = document.getElementById('avatar-picker-row');
+        avRow.innerHTML = '';
+        AVATAR_ICONS.forEach(ico => {
+          const btn = document.createElement('button');
+          btn.className = `action-btn ${userData.avatar === ico ? 'equipped' : ''}`;
+          btn.style.fontSize = '18px';
+          btn.textContent = ico;
+          btn.addEventListener('click', () => {
+            userData.avatar = ico;
+            saveUserData();
+            openPlayerProfileModal(userData);
+          });
+          avRow.appendChild(btn);
+        });
+
+        const frRow = document.getElementById('frame-picker-row');
+        frRow.innerHTML = '';
+        PROFILE_FRAMES.filter(f => (userData.ownedFrames || ['none']).includes(f.id)).forEach(fr => {
+          const btn = document.createElement('button');
+          btn.className = `action-btn ${userData.equippedFrame === fr.id ? 'equipped' : ''}`;
+          btn.textContent = fr.name;
+          btn.addEventListener('click', () => {
+            userData.equippedFrame = fr.id;
+            saveUserData();
+            openPlayerProfileModal(userData);
+          });
+          frRow.appendChild(btn);
+        });
+      } else {
+        customizer.classList.add('hidden');
+      }
+
+      document.getElementById('profile-view-modal').classList.remove('hidden');
+
+      const previewBox = document.getElementById('friend-3d-preview');
+      previewBox.innerHTML = '';
+      if (pvAnimId) cancelAnimationFrame(pvAnimId);
+
+      pvScene = new THREE.Scene();
+      pvCamera = new THREE.PerspectiveCamera(45, previewBox.clientWidth / previewBox.clientHeight, 0.1, 30);
+      pvCamera.position.set(0, 1.35, 3.3);
+      pvCamera.lookAt(0, 1.1, 0);
+
+      pvRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      pvRenderer.setSize(previewBox.clientWidth, previewBox.clientHeight);
+      pvRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      previewBox.appendChild(pvRenderer.domElement);
+
+      pvScene.add(new THREE.AmbientLight(0xffffff, 0.95));
+      const pLight = new THREE.DirectionalLight(0xc084fc, 1.3);
+      pLight.position.set(3, 5, 4);
+      pvScene.add(pLight);
+
+      const ped = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 0.95, 0.16, 24),
+        new THREE.MeshStandardMaterial({ color: 0x312e81, emissive: 0x4f46e5, emissiveIntensity: 0.4 })
+      );
+      ped.position.y = -0.08;
+      pvScene.add(ped);
+
+      pvRig = buildCharacterMesh(playerObj.equippedCharSkin || 'cyber_runner');
+      pvRig.root.rotation.y = Math.PI;
+      pvScene.add(pvRig.root);
+
+      function renderPvLoop() {
+        pvAnimId = requestAnimationFrame(renderPvLoop);
+        pvRig.root.rotation.y += 0.015;
+        pvRenderer.render(pvScene, pvCamera);
+      }
+      renderPvLoop();
+    }
+
+    // --- TUGMALAR VA HODISALAR ---
+    document.getElementById('btn-start-game').addEventListener('click', (e) => {
+      e.stopPropagation();
+      startNewRun();
+    });
+    document.getElementById('go-retry-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      startNewRun();
+    });
+    document.getElementById('go-menu-btn').addEventListener('click', () => {
+      document.getElementById('gameover-modal').classList.add('hidden');
+      document.getElementById('lobby-screen').classList.remove('hidden');
+      updateLobbyUI();
+    });
+
+    document.getElementById('open-my-profile').addEventListener('click', () => {
+      if (userData) openPlayerProfileModal(userData);
+    });
+    document.getElementById('btn-open-ranking').addEventListener('click', () => {
+      renderTop20Ranking();
+      document.getElementById('ranking-modal').classList.remove('hidden');
+    });
+    document.getElementById('nav-shop').addEventListener('click', () => {
+      renderShop();
+      document.getElementById('shop-modal').classList.remove('hidden');
+    });
+    document.getElementById('nav-missions').addEventListener('click', () => {
+      renderMissions();
+      document.getElementById('missions-modal').classList.remove('hidden');
+    });
+    document.getElementById('nav-skins').addEventListener('click', () => {
+      renderOwnedSkins();
+      document.getElementById('skins-modal').classList.remove('hidden');
+    });
+    document.getElementById('nav-friends').addEventListener('click', () => {
+      renderFriends();
+      document.getElementById('friends-modal').classList.remove('hidden');
+    });
+
+    document.querySelectorAll('[data-shop-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-shop-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeShopTab = btn.dataset.shopTab;
+        renderShop();
+      });
+    });
+
+    document.querySelectorAll('[data-skin-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-skin-tab]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeSkinTab = btn.dataset.skinTab;
+        renderOwnedSkins();
+      });
+    });
+
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById(btn.dataset.close).classList.add('hidden');
+        if (btn.dataset.close === 'shop-modal') {
+          clearShopPreviews();
+        }
+        if (btn.dataset.close === 'profile-view-modal' && pvAnimId) {
+          cancelAnimationFrame(pvAnimId);
+          pvAnimId = null;
+        }
+      });
+    });
+
+    document.getElementById('copy-id-btn').addEventListener('click', () => {
+      if (!userData) return;
+      const temp = document.createElement('input');
+      temp.value = userData.playerId;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast(`📋 ID nusxalandi: ${userData.playerId}`);
+    });
+
+    document.getElementById('send-friend-req-btn').addEventListener('click', async () => {
+      const targetId = document.getElementById('friend-id-input').value.trim();
+      if (!/^\d{8}$/.test(targetId)) {
+        showToast('⚠️ 8 xonali raqamli ID kiriting!');
+        return;
+      }
+      if (targetId === userData.playerId) {
+        showToast('⚠️ O\'zingizga so\'rov yubora olmaysiz!');
+        return;
+      }
+      if ((userData.friends || []).includes(targetId)) {
+        showToast('✅ Bu o\'yinchi allaqachon do\'stingiz!');
+        return;
+      }
+
+      let targetPlayer = allPlayersMap[targetId];
+      if (!targetPlayer && db) {
+        try {
+          const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId));
+          if (snap.exists()) targetPlayer = snap.data();
+        } catch (e) {}
+      }
+
+      if (!targetPlayer) {
+        showToast('❌ Bunday ID ga ega haqiqiy o\'yinchi topilmadi.');
+        return;
+      }
+
+      targetPlayer.friendRequests = targetPlayer.friendRequests || [];
+      if (!targetPlayer.friendRequests.includes(userData.playerId)) {
+        targetPlayer.friendRequests.push(userData.playerId);
+        if (db) {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId), targetPlayer, { merge: true });
+        }
+      }
+
+      document.getElementById('friend-id-input').value = '';
+      showToast(`📨 ${targetPlayer.name} ga Druzya so'rovi yuborildi!`);
+    });
+
+    function handleRegistration() {
+      const nameVal = document.getElementById('reg-name-input').value.trim();
+      if (nameVal.length < 2) {
+        showToast('⚠️ Kamida 2 ta harfdan iborat ism kiriting!');
+        return;
+      }
+
+      userData = {
+        name: nameVal,
+        playerId: generate8DigitId(),
+        coins: 500,
+        boardsCount: 20,
+        bestDist: 0,
+        avatar: '🏂',
+        equippedFrame: 'none',
+        ownedFrames: ['none'],
+        equippedCharSkin: 'cyber_runner',
+        ownedCharSkins: ['cyber_runner'],
+        equippedBoardSkin: 'ice_wave',
+        ownedBoardSkins: ['ice_wave'],
+        friends: [],
+        friendRequests: [],
+        claimedMissions: [],
+        stats: { totalDist: 0, totalCoins: 0, boardsUsed: 0, bestDist: 0 }
+      };
+
+      saveUserData();
+      refreshPlayer3DModels();
+      document.getElementById('register-modal').classList.add('hidden');
+      showToast(`🎉 Xush kelibsiz, ${userData.name}! ID: ${userData.playerId}`);
+    }
+
+    document.getElementById('reg-submit-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleRegistration();
+    });
+    document.getElementById('reg-name-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleRegistration();
+    });
+
+    // --- ASOSIY 60FPS ANIMATSIYA SIKLI ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const rawDt = Math.min(clock.getDelta(), 0.05);
+
+      // Slow-Motion yiqilish animatsiyasi jarayoni
+      if (isPlaying && isDying) {
+        deathTimer -= rawDt;
+        const slowDt = rawDt * 0.35; // 3 barobar sekinlashtirilgan vaqt
+        const progress = 1 - Math.max(0, deathTimer / DEATH_DURATION);
+
+        // Qahramon orqaga uchib yerga yiqiladi
+        activeCharRig.root.position.z += 5.5 * slowDt;
+        playerY = Math.max(0, playerY + velocityY * slowDt);
+        velocityY += GRAVITY * slowDt;
+        activeCharRig.root.position.y = playerY;
+
+        activeCharRig.root.rotation.x = Math.min(Math.PI / 2.1, progress * (Math.PI / 1.8));
+        activeCharRig.leftArm.rotation.x = 1.6;
+        activeCharRig.rightArm.rotation.x = 1.6;
+        activeCharRig.leftLeg.rotation.x = -0.4;
+        activeCharRig.rightLeg.rotation.x = -0.3;
+
+        // Kamera silliq tebranishi (shake)
+        const shake = (1 - progress) * 0.22;
+        camera.position.x = activeCharRig.root.position.x * 0.35 + (Math.random() - 0.5) * shake;
+        camera.position.y = 4.6 + (Math.random() - 0.5) * shake;
+        camera.lookAt(activeCharRig.root.position.x * 0.4, 1.0, activeCharRig.root.position.z - 2);
+
+        if (deathTimer <= 0) {
+          finishRun();
+        }
+
+        renderer.render(scene, camera);
+        return;
+      }
+
+      const dt = rawDt;
+
+      const posAttr = snowSystem.geometry.attributes.position;
+      for (let i = 0; i < snowCount; i++) {
+        let y = posAttr.getY(i) - dt * 3.2;
+        let z = posAttr.getZ(i) + (isPlaying ? gameSpeed * 0.45 : 3.5) * dt;
+        if (y < 0) y = 18;
+        if (z > 14) z = -95;
+        posAttr.setY(i, y);
+        posAttr.setZ(i, z);
+      }
+      posAttr.needsUpdate = true;
+
+      const envSpeed = isPlaying ? gameSpeed : 5.5;
+      sideScenery.forEach(item => {
+        item.position.z += envSpeed * dt;
+        if (item.position.z > 16) item.position.z -= 22 * 11;
+      });
+
+      if (isPlaying) {
+        const scoreMult = starTimer > 0 ? 2 : 1;
+        runDistance += dt * (gameSpeed * 0.55) * scoreMult;
+
+        const speedProgress = 1 - Math.exp(-runDistance / 2600);
+        gameSpeed = BASE_SPEED + (MAX_SPEED - BASE_SPEED) * speedProgress;
+
+        document.getElementById('hud-dist').textContent = `${Math.floor(runDistance)} m`;
+
+        if (isHoverboardActive) {
+          hoverboardTimer -= dt;
+          document.getElementById('pu-board-fill').style.width = `${Math.max(0, (hoverboardTimer / HOVERBOARD_DURATION) * 100)}%`;
+          if (hoverboardTimer <= 0) deactivateHoverboard();
+        }
+        if (sneakersTimer > 0) {
+          sneakersTimer -= dt;
+          document.getElementById('pu-sneakers-fill').style.width = `${Math.max(0, (sneakersTimer / SNEAKERS_DURATION) * 100)}%`;
+          if (sneakersTimer <= 0) {
+            activeCharRig.leftShoeMat.color.setHex(activeCharRig.defaultAccent);
+            activeCharRig.leftShoeMat.emissive.setHex(activeCharRig.defaultAccent);
+            activeCharRig.rightShoeMat.color.setHex(activeCharRig.defaultAccent);
+            activeCharRig.rightShoeMat.emissive.setHex(activeCharRig.defaultAccent);
+            document.getElementById('pu-sneakers-box').classList.add('hidden');
+          }
+        }
+        if (starTimer > 0) {
+          starTimer -= dt;
+          document.getElementById('pu-star-fill').style.width = `${Math.max(0, (starTimer / STAR_DURATION) * 100)}%`;
+          if (starTimer <= 0) {
+            document.getElementById('pu-star-box').classList.add('hidden');
+            document.getElementById('hud-2x-badge').classList.add('hidden');
+          }
+        }
+        if (jetpackTimer > 0) {
+          jetpackTimer -= dt;
+          document.getElementById('pu-jetpack-fill').style.width = `${Math.max(0, (jetpackTimer / JETPACK_DURATION) * 100)}%`;
+          playerY += (7.4 - playerY) * Math.min(1, dt * 8);
+          velocityY = 0;
+          isGrounded = false;
+
+          jetpackCoinSpawnTimer -= dt;
+          if (jetpackCoinSpawnTimer <= 0) {
+            spawnCoinLine(currentLane, 7.6, -42, 3);
+            jetpackCoinSpawnTimer = 0.45;
+          }
+
+          if (jetpackTimer <= 0) {
+            activeCharRig.jetpackGroup.visible = false;
+            document.getElementById('pu-jetpack-box').classList.add('hidden');
+          }
+        }
+
+        const targetX = LANES[currentLane];
+        const dx = targetX - activeCharRig.root.position.x;
+        activeCharRig.root.position.x += dx * Math.min(1, dt * 13);
+        activeCharRig.root.rotation.set(0, 0, -dx * 0.1);
+
+        if (jetpackTimer > 0) {
+          activeCharRig.bodyPivot.rotation.x = -0.55;
+          activeCharRig.leftLeg.rotation.x = -0.35;
+          activeCharRig.rightLeg.rotation.x = -0.2;
+          activeCharRig.leftKnee.rotation.x = 0.3;
+          activeCharRig.rightKnee.rotation.x = 0.2;
+          activeCharRig.leftArm.rotation.x = -2.4;
+          activeCharRig.rightArm.rotation.x = -2.4;
+        } else if (isSliding) {
+          activeCharRig.bodyPivot.rotation.x = 1.05;
+          activeCharRig.bodyPivot.position.y = 0.36;
+          activeCharRig.leftLeg.position.y = 0.36;
+          activeCharRig.rightLeg.position.y = 0.36;
+
+          activeCharRig.leftLeg.rotation.x = 1.35;
+          activeCharRig.leftKnee.rotation.x = -0.1;
+          activeCharRig.rightLeg.rotation.x = -0.35;
+          activeCharRig.rightKnee.rotation.x = -1.35;
+
+          activeCharRig.leftArm.rotation.x = -0.6;
+          activeCharRig.rightArm.rotation.x = -0.6;
+        } else if (isHoverboardActive) {
+          activeCharRig.bodyPivot.rotation.x = -0.12;
+          activeCharRig.leftLeg.rotation.x = 0.32;
+          activeCharRig.leftKnee.rotation.x = -0.35;
+          activeCharRig.rightLeg.rotation.x = -0.28;
+          activeCharRig.rightKnee.rotation.x = -0.25;
+          activeCharRig.leftArm.rotation.x = 0.4;
+          activeCharRig.rightArm.rotation.x = -0.4;
+        } else if (isGrounded) {
+          runCycle += dt * gameSpeed * 0.72;
+          const swing = Math.sin(runCycle);
+          activeCharRig.bodyPivot.rotation.x = -0.12;
+          activeCharRig.bodyPivot.position.y = 0.88 + Math.abs(Math.cos(runCycle)) * 0.08;
+
+          activeCharRig.leftLeg.rotation.x = swing * 0.82;
+          activeCharRig.leftKnee.rotation.x = swing < 0 ? swing * 0.95 : -0.15;
+
+          activeCharRig.rightLeg.rotation.x = -swing * 0.82;
+          activeCharRig.rightKnee.rotation.x = -swing < 0 ? -swing * 0.95 : -0.15;
+
+          activeCharRig.leftArm.rotation.x = -swing * 0.75;
+          activeCharRig.leftElbow.rotation.x = 0.65;
+          activeCharRig.rightArm.rotation.x = swing * 0.75;
+          activeCharRig.rightElbow.rotation.x = 0.65;
+        } else {
+          activeCharRig.bodyPivot.rotation.x = -0.18;
+          activeCharRig.leftLeg.rotation.x = 0.55;
+          activeCharRig.leftKnee.rotation.x = -0.75;
+          activeCharRig.rightLeg.rotation.x = -0.25;
+          activeCharRig.rightKnee.rotation.x = -0.45;
+          activeCharRig.leftArm.rotation.x = 0.85;
+          activeCharRig.rightArm.rotation.x = 0.85;
+        }
+
+        if (isSliding) {
+          slideTimer -= dt;
+          if (slideTimer <= 0) endSlide();
+        }
+
+        // Poyezd tomlari VA Qishki yashik ustini yer balandligi sifatida aniqlash
+        let supportedHeight = 0;
+        if (jetpackTimer <= 0) {
+          for (let i = 0; i < obstacles.length; i++) {
+            const obs = obstacles[i];
+            const laneDiff = Math.abs(obs.mesh.position.x - activeCharRig.root.position.x);
+            if (laneDiff > 0.95) continue;
+
+            const tz = obs.mesh.position.z;
+            const frontZ = tz + obs.halfLen;
+            const backZ = tz - obs.halfLen;
+
+            if (obs.type === 'train') {
+              if (obs.hasRamp && obs.rampLen > 0) {
+                const rampStartZ = frontZ + obs.rampLen;
+                if (0 <= rampStartZ && 0 >= frontZ) {
+                  const progress = (rampStartZ - 0) / obs.rampLen;
+                  const rampY = progress * TRAIN_HEIGHT;
+                  if (rampY > supportedHeight) supportedHeight = rampY;
+                }
+              }
+
+              if (0 <= frontZ + 0.3 && 0 >= backZ - 0.3) {
+                if (playerY >= TRAIN_HEIGHT - 0.55) {
+                  supportedHeight = Math.max(supportedHeight, TRAIN_HEIGHT);
+                }
+              }
+            } else if (obs.type === 'low') {
+              // Yashik ustiga sakrab tushganda ustida turib yana sakrash imkoniyati
+              if (0 <= frontZ + 0.35 && 0 >= backZ - 0.35) {
+                if (playerY >= CRATE_HEIGHT - 0.38) {
+                  supportedHeight = Math.max(supportedHeight, CRATE_HEIGHT);
+                }
+              }
+            }
+          }
+        }
+
+        groundHeight = supportedHeight;
+
+        if (jetpackTimer <= 0) {
+          if (playerY > groundHeight || velocityY > 0) {
+            playerY += velocityY * dt;
+            velocityY += GRAVITY * dt;
+            if (playerY <= groundHeight) {
+              playerY = groundHeight;
+              velocityY = 0;
+              isGrounded = true;
+            } else {
+              isGrounded = false;
+            }
+          } else {
+            playerY = groundHeight;
+            isGrounded = true;
+          }
+        }
+
+        activeCharRig.root.position.y = playerY + (isHoverboardActive ? 0.14 : 0);
+
+        let insideTunnel = false;
+        for (let i = 0; i < tunnels.length; i++) {
+          const tun = tunnels[i];
+          const halfT = tun.length / 2 + 4;
+          if (Math.abs(tun.mesh.position.z) < halfT) {
+            insideTunnel = true;
+            break;
+          }
+        }
+
+        camera.position.x += (activeCharRig.root.position.x * 0.38 - camera.position.x) * Math.min(1, dt * 8);
+        const targetCamY = insideTunnel ? (2.65 + playerY * 0.42) : (5.2 + playerY * 0.55);
+        const targetLookY = insideTunnel ? (1.65 + playerY * 0.45) : (1.5 + playerY * 0.5);
+        camera.position.y += (targetCamY - camera.position.y) * Math.min(1, dt * 8);
+        camera.lookAt(camera.position.x * 0.5, targetLookY, -8);
+
+        spawnTimer -= dt * gameSpeed;
+        if (spawnTimer <= 0) {
+          spawnObstacleRow();
+          const speedRatio = gameSpeed / BASE_SPEED;
+          spawnTimer = (21 + Math.random() * 5) * Math.max(1.0, speedRatio * 0.85);
+        }
+
+        tunnelTimer -= dt * gameSpeed;
+        if (tunnelTimer <= 0) {
+          createWinterTunnel();
+          tunnelTimer = 140 + Math.random() * 40;
+        }
+
+        for (let i = tunnels.length - 1; i >= 0; i--) {
+          const tun = tunnels[i];
+          tun.mesh.position.z += gameSpeed * dt;
+          if (tun.mesh.position.z > 25) {
+            scene.remove(tun.mesh);
+            tunnels.splice(i, 1);
+          }
+        }
+
+        const pCenterX = activeCharRig.root.position.x;
+        const pBottomY = playerY;
+        const pTopY = playerY + (isSliding ? 0.85 : 1.75);
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.mesh.position.z += gameSpeed * dt;
+
+          if (jetpackTimer <= 0 && !isDying) {
+            const laneHit = Math.abs(obs.mesh.position.x - pCenterX) < 0.72;
+            const zHit = Math.abs(obs.mesh.position.z) < (obs.halfLen + 0.32);
+
+            if (laneHit && zHit) {
+              let crashed = false;
+              if (obs.type === 'train') {
+                const onRamp = obs.hasRamp && obs.mesh.position.z + obs.halfLen > -0.2;
+                if (pBottomY < TRAIN_HEIGHT - 0.5 && !onRamp) {
+                  crashed = true;
+                }
+              } else if (obs.type === 'low') {
+                // To'g'ri oldidan borib tegsa o'ladi; ustiga sakrab tushsa (pBottomY >= CRATE_HEIGHT - 0.38) o'lmaydi
+                if (pBottomY < CRATE_HEIGHT - 0.38) {
+                  crashed = true;
+                }
+              } else if (obs.type === 'high') {
+                // Ostki qismi 1.48 balandda — sirpanib o'tganda (pTopY <= 1.38) tegmaydi
+                if (pTopY > 1.45 && pBottomY < 2.85) {
+                  crashed = true;
+                }
+              }
+
+              if (crashed) {
+                if (isHoverboardActive) {
+                  deactivateHoverboard();
+                  scene.remove(obs.mesh);
+                  obstacles.splice(i, 1);
+                  showToast('💥 Skuter sizni to\'qnashuvdan qutqardi!');
+                  continue;
+                } else {
+                  triggerSlowDeath();
+                  break;
+                }
+              }
+            }
+          }
+
+          if (obs.mesh.position.z > 18) {
+            scene.remove(obs.mesh);
+            obstacles.splice(i, 1);
+          }
+        }
+
+        for (let i = coins.length - 1; i >= 0; i--) {
+          const coin = coins[i];
+          coin.position.z += gameSpeed * dt;
+          coin.rotation.z += dt * 4;
+
+          const dxCoin = Math.abs(coin.position.x - pCenterX);
+          const dyCoin = Math.abs(coin.position.y - (playerY + 0.9));
+          const dzCoin = Math.abs(coin.position.z);
+
+          if (dxCoin < 0.85 && dyCoin < 1.15 && dzCoin < 0.85) {
+            runCoins++;
+            document.getElementById('hud-coins').textContent = runCoins;
+            scene.remove(coin);
+            coins.splice(i, 1);
+            continue;
+          }
+
+          if (coin.position.z > 16) {
+            scene.remove(coin);
+            coins.splice(i, 1);
+          }
+        }
+
+        for (let i = powerupItems.length - 1; i >= 0; i--) {
+          const pu = powerupItems[i];
+          pu.mesh.position.z += gameSpeed * dt;
+          pu.mesh.rotation.y += dt * 3;
+
+          const dxP = Math.abs(pu.mesh.position.x - pCenterX);
+          const dyP = Math.abs(pu.mesh.position.y - (playerY + 0.9));
+          const dzP = Math.abs(pu.mesh.position.z);
+
+          if (dxP < 0.9 && dyP < 1.25 && dzP < 0.9) {
+            activatePowerup(pu.type);
+            scene.remove(pu.mesh);
+            powerupItems.splice(i, 1);
+            continue;
+          }
+
+          if (pu.mesh.position.z > 16) {
+            scene.remove(pu.mesh);
+            powerupItems.splice(i, 1);
+          }
+        }
+      } else {
+        runCycle += dt * 2.2;
+        activeCharRig.root.position.set(0, Math.sin(runCycle) * 0.05, 0);
+        activeCharRig.root.rotation.set(0, Math.PI, 0);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function bootApp() {
+      userData = loadLocalUser();
+      if (!userData) {
+        document.getElementById('register-modal').classList.remove('hidden');
+      } else {
+        refreshPlayer3DModels();
+        updateLobbyUI();
+      }
+      animate();
+      initFirebaseBackground();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootApp);
+    } else {
+      bootApp();
+    }
+  </script>
+</body>
+</html>
